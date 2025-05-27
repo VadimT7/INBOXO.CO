@@ -1,6 +1,5 @@
-
 import { Card, CardContent } from "@/components/ui/card";
-import { LogIn, Filter, Send, Mail, FileText, MessageCircle } from "lucide-react"; // Added more icons for flexibility
+import { LogIn, Filter, Send } from "lucide-react"; // Removed unused icons Mail, FileText, MessageCircle for cleanliness
 
 const steps = [
   {
@@ -23,9 +22,10 @@ const steps = [
   },
 ];
 
+
 const HowItWorksSection = () => {
   return (
-    <section className="bg-slate-50 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8">
+    <section id="how-it-works" className="bg-slate-50 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"> {/* Added id here */}
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 sm:mb-16 text-slate-800">
           How InboxFlows Works

@@ -1,19 +1,54 @@
-
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
-import HowItWorksSection from "@/components/HowItWorksSection"; // Import the new section
+import { ChevronDown, LogIn, LogOut } from "lucide-react";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import { useAuthSession } from "@/hooks/useAuthSession"; // Import the auth hook
+import { Link } from "react-router-dom"; // Import Link for navigation
 
 const Index = () => {
+  const { session, user, signOut, loading } = useAuthSession(); // Use the auth hook
+
   return (
     <>
       <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 to-black text-white overflow-hidden px-4 sm:px-6 lg:px-8">
+        {/* Header for Login/Logout */}
+        <header className="absolute top-0 right-0 p-4 sm:p-6 z-20">
+          {loading ? (
+            <p className="text-sm text-slate-300">Loading user...</p>
+          ) : session ? (
+            <div className="flex items-center space-x-3">
+              <span className="text-sm text-slate-300 hidden sm:inline">
+                {user?.email}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={signOut}
+                className="border-slate-400 text-slate-200 hover:bg-slate-800 hover:text-white"
+              >
+                <LogOut className="mr-0 sm:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-slate-400 text-slate-200 hover:bg-slate-800 hover:text-white"
+            >
+              <Link to="/login">
+                <LogIn className="mr-2 h-4 w-4" /> Login
+              </Link>
+            </Button>
+          )}
+        </header>
+
         {/* Background shapes/glows for visual interest - optional */}
         <div className="absolute top-0 left-0 w-full h-full opacity-20">
           <div className="absolute -top-1/4 -left-1/4 w-1/2 h-1/2 bg-blue-600 rounded-full filter blur-3xl opacity-50 animate-[pulse_8s_cubic-bezier(0.4,0,0.6,1)_infinite]"></div>
           <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-indigo-600 rounded-full filter blur-3xl opacity-50 animate-[pulse_10s_cubic-bezier(0.4,0,0.6,1)_infinite_alternate]"></div>
         </div>
         
-        <main className="relative z-10 flex flex-col items-center justify-center text-center space-y-8 flex-grow">
+        <main className="relative z-10 flex flex-col items-center justify-center text-center space-y-8 flex-grow pt-16 sm:pt-20"> {/* Added padding top for header */}
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight">
             Inbox chaos?
             <br className="hidden sm:block" />
@@ -36,7 +71,7 @@ const Index = () => {
               variant="outline" 
               size="lg" 
               className="font-semibold text-lg px-8 py-6 border-slate-400 text-slate-200 hover:bg-slate-800 hover:text-white shadow-md transform transition-all duration-200 hover:scale-105"
-              onClick={() => console.log("See How It Works clicked")}
+              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
             >
               See How It Works
             </Button>
@@ -47,7 +82,7 @@ const Index = () => {
           <ChevronDown className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400 animate-bounce-slow opacity-70" />
         </div>
       </div>
-      <HowItWorksSection /> {/* Added the new section here */}
+      <HowItWorksSection /> {/* Added the new section here, ensure it has an id="how-it-works" if needed */}
     </>
   );
 };
