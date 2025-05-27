@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -95,7 +96,16 @@
     @apply border-border;
   }
 
+  html, body, #root {
+    height: 100%; /* Ensure html, body, and #root take full height */
+  }
+
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif; /* Adding a modern sans-serif font */
   }
 }
+
+/* Import Inter font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+

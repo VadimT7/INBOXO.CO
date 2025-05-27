@@ -1,8 +1,9 @@
+
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* max-width: 1280px; */ /* Removed to allow full-width sections */
+  /* margin: 0 auto; */ /* Removed for full-width control */
+  /* padding: 2rem; */ /* Removed to avoid interference with page-specific padding */
+  /* text-align: center; */ /* Removed, page content will control its alignment */
 }
 
 .logo {
@@ -40,3 +41,4 @@
 .read-the-docs {
   color: #888;
 }
+
