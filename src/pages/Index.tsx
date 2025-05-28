@@ -1,11 +1,12 @@
+
 import { Button } from "@/components/ui/button";
-import { ChevronDown, LogIn, LogOut } from "lucide-react";
+import { ChevronDown, LogIn, LogOut, Inbox } from "lucide-react";
 import HowItWorksSection from "@/components/HowItWorksSection";
-import { useAuthSession } from "@/hooks/useAuthSession"; // Import the auth hook
-import { Link } from "react-router-dom"; // Import Link for navigation
+import { useAuthSession } from "@/hooks/useAuthSession";
+import { Link } from "react-router-dom";
 
 const Index = () => {
-  const { session, user, signOut, loading } = useAuthSession(); // Use the auth hook
+  const { session, user, signOut, loading } = useAuthSession();
 
   return (
     <>
@@ -16,6 +17,16 @@ const Index = () => {
             <p className="text-sm text-slate-300">Loading user...</p>
           ) : session ? (
             <div className="flex items-center space-x-3">
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="border-slate-400 text-slate-200 hover:bg-slate-800 hover:text-white"
+              >
+                <Link to="/leads">
+                  <Inbox className="mr-2 h-4 w-4" /> Leads
+                </Link>
+              </Button>
               <span className="text-sm text-slate-300 hidden sm:inline">
                 {user?.email}
               </span>
@@ -48,7 +59,7 @@ const Index = () => {
           <div className="absolute -bottom-1/4 -right-1/4 w-1/2 h-1/2 bg-indigo-600 rounded-full filter blur-3xl opacity-50 animate-[pulse_10s_cubic-bezier(0.4,0,0.6,1)_infinite_alternate]"></div>
         </div>
         
-        <main className="relative z-10 flex flex-col items-center justify-center text-center space-y-8 flex-grow pt-16 sm:pt-20"> {/* Added padding top for header */}
+        <main className="relative z-10 flex flex-col items-center justify-center text-center space-y-8 flex-grow pt-16 sm:pt-20">
           <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight">
             Inbox chaos?
             <br className="hidden sm:block" />
@@ -60,13 +71,26 @@ const Index = () => {
             InboxFlows qualifies, replies to, and organizes leads for you—instantly.
           </p>
           <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Button 
-              size="lg" 
-              className="font-bold text-lg px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
-              onClick={() => console.log("Get Early Access clicked")}
-            >
-              Get Early Access
-            </Button>
+            {session ? (
+              <Button 
+                asChild
+                size="lg" 
+                className="font-bold text-lg px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
+              >
+                <Link to="/leads">
+                  <Inbox className="mr-2 h-5 w-5" />
+                  View My Leads
+                </Link>
+              </Button>
+            ) : (
+              <Button 
+                asChild
+                size="lg" 
+                className="font-bold text-lg px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
+              >
+                <Link to="/login">Get Early Access</Link>
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="lg" 
@@ -82,7 +106,7 @@ const Index = () => {
           <ChevronDown className="w-8 h-8 sm:w-10 sm:h-10 text-slate-400 animate-bounce-slow opacity-70" />
         </div>
       </div>
-      <HowItWorksSection /> {/* Added the new section here, ensure it has an id="how-it-works" if needed */}
+      <HowItWorksSection />
     </>
   );
 };
