@@ -9,6 +9,45 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      leads: {
+        Row: {
+          created_at: string
+          gmail_message_id: string
+          id: string
+          received_at: string
+          sender_email: string
+          snippet: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gmail_message_id: string
+          id?: string
+          received_at: string
+          sender_email: string
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gmail_message_id?: string
+          id?: string
+          received_at?: string
+          sender_email?: string
+          snippet?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           google_access_token: string | null
