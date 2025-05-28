@@ -23,6 +23,16 @@ export function useGmailSync() {
       });
 
       if (error) {
+        console.error('Gmail sync error details:', error);
+        
+        // Handle specific error cases
+        if (error.message?.includes('No Google access token found')) {
+          toast.error('Google access expired. Please sign out and sign in again with Google to re-enable Gmail sync.');
+        } else if (error.message?.includes('invalid_grant') || error.message?.includes('unauthorized')) {
+          toast.error('Google authorization expired. Please sign out and sign in again.');
+        } else {
+          toast.error(`Failed to sync Gmail: ${error.message}`);
+        }
         throw error;
       }
 
@@ -37,7 +47,11 @@ export function useGmailSync() {
       return data;
     } catch (error: any) {
       console.error('Gmail sync error:', error);
-      toast.error(`Failed to sync Gmail: ${error.message}`);
+      
+      // Only show generic error if we haven't already shown a specific one
+      if (!error.message?.includes('Google access') && !error.message?.includes('authorization')) {
+        toast.error(`Failed to sync Gmail: ${error.message}`);
+      }
       throw error;
     } finally {
       setLoading(false);

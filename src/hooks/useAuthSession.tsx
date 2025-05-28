@@ -17,7 +17,7 @@ export function useAuthSession() {
         provider: 'google',
         options: {
           redirectTo: window.location.origin,
-          scopes: 'https://www.googleapis.com/auth/gmail.readonly', // Request Gmail read access
+          scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
         },
       });
       if (error) {
@@ -44,26 +44,34 @@ export function useAuthSession() {
   };
 
   const updateProfileWithToken = useCallback(async (currentSession: Session) => {
-    if (currentSession?.user && currentSession?.provider_token) {
+    if (currentSession?.user) {
       console.log('Attempting to save Google access token for user:', currentSession.user.id);
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: currentSession.user.id,
-            google_access_token: currentSession.provider_token,
-          },
-          { onConflict: 'id' }
-        );
+      console.log('Provider token available:', !!currentSession.provider_token);
+      console.log('Provider refresh token available:', !!currentSession.provider_refresh_token);
+      
+      const tokenToSave = currentSession.provider_token || currentSession.provider_refresh_token;
+      
+      if (tokenToSave) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: currentSession.user.id,
+              google_access_token: tokenToSave,
+            },
+            { onConflict: 'id' }
+          );
 
-      if (profileError) {
-        toast.error(`Failed to save profile: ${profileError.message}`);
-        console.error('Error saving profile/token:', profileError);
+        if (profileError) {
+          toast.error(`Failed to save profile: ${profileError.message}`);
+          console.error('Error saving profile/token:', profileError);
+        } else {
+          console.log('Google access token saved successfully for user:', currentSession.user.id);
+        }
       } else {
-        console.log('Google access token saved successfully for user:', currentSession.user.id);
+        console.log('No provider token available in session. User may need to re-authenticate with Google.');
+        toast.warning('Google access not available. Please sign out and sign in again with Google to enable Gmail sync.');
       }
-    } else {
-      console.log('No provider token or user in session, skipping profile update.');
     }
   }, []);
 

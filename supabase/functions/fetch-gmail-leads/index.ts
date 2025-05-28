@@ -60,10 +60,12 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (profileError || !profile?.google_access_token) {
-      throw new Error('No Google access token found. Please re-authenticate with Google.');
+      console.error('Profile error:', profileError);
+      throw new Error('No Google access token found. Please sign out and sign in again with Google to enable Gmail sync.');
     }
 
     const accessToken = profile.google_access_token;
+    console.log('Using access token for Gmail API (length):', accessToken.length);
 
     // Define keywords to filter emails
     const keywords = ['inquiry', 'contact', 'quote', 'project', 'hello', 'request'];
@@ -87,7 +89,15 @@ const handler = async (req: Request): Promise<Response> => {
     if (!listResponse.ok) {
       const errorText = await listResponse.text();
       console.error('Gmail API list error:', errorText);
-      throw new Error(`Failed to fetch emails from Gmail: ${listResponse.status} - ${errorText}`);
+      
+      // Handle specific error cases
+      if (listResponse.status === 401) {
+        throw new Error('Google access token expired. Please sign out and sign in again with Google.');
+      } else if (listResponse.status === 403) {
+        throw new Error('Gmail API access denied. Please ensure Gmail API is enabled in Google Cloud Console.');
+      } else {
+        throw new Error(`Failed to fetch emails from Gmail: ${listResponse.status} - ${errorText}`);
+      }
     }
 
     const listData: GmailListResponse = await listResponse.json();
@@ -118,7 +128,7 @@ const handler = async (req: Request): Promise<Response> => {
         );
 
         if (!messageResponse.ok) {
-          console.error(`Failed to fetch message ${message.id}`);
+          console.error(`Failed to fetch message ${message.id}: ${messageResponse.status}`);
           continue;
         }
 
