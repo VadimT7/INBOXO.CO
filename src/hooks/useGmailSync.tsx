@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -16,24 +15,61 @@ export function useGmailSync() {
         throw new Error('No active session');
       }
 
+      console.log('Invoking fetch-gmail-leads function...');
+      
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
         headers: {
           Authorization: `Bearer ${session.session.access_token}`,
         },
       });
 
+      console.log('Function response:', { data, error });
+
       if (error) {
-        console.error('Gmail sync error details:', error);
+        // Try to extract detailed error information
+        let errorMessage = error.message;
+        let errorDetails = null;
+        
+        if (error.message?.includes('non-2xx status code')) {
+          // Handle Edge Function error response
+          try {
+            if (error.context?.body) {
+              const errorBody = typeof error.context.body === 'string' 
+                ? JSON.parse(error.context.body)
+                : error.context.body;
+                
+              errorMessage = errorBody.error || errorMessage;
+              errorDetails = errorBody.details;
+            }
+          } catch (e) {
+            console.error('Error parsing error details:', e);
+            // If we can't parse the error, use the original error message
+          }
+        }
         
         // Handle specific error cases
-        if (error.message?.includes('No Google access token found')) {
+        if (errorMessage?.includes('No Google access token found') || 
+            errorMessage?.includes('Google access token is invalid or expired')) {
           toast.error('Google access expired. Please sign out and sign in again with Google to re-enable Gmail sync.');
-        } else if (error.message?.includes('invalid_grant') || error.message?.includes('unauthorized')) {
+        } else if (errorMessage?.includes('invalid_grant') || 
+                  errorMessage?.includes('unauthorized') ||
+                  errorMessage?.includes('Token has been expired or revoked')) {
           toast.error('Google authorization expired. Please sign out and sign in again.');
+        } else if (errorMessage?.includes('Gmail API access denied')) {
+          toast.error('Gmail API access denied. Please ensure you granted all required permissions.');
         } else {
-          toast.error(`Failed to sync Gmail: ${error.message}`);
+          toast.error(`Failed to sync Gmail: ${errorMessage}`);
         }
+
+        if (errorDetails) {
+          console.error('Error details:', errorDetails);
+        }
+        
         throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data received from Gmail sync');
       }
 
       console.log('Gmail sync result:', data);
@@ -49,8 +85,10 @@ export function useGmailSync() {
       console.error('Gmail sync error:', error);
       
       // Only show generic error if we haven't already shown a specific one
-      if (!error.message?.includes('Google access') && !error.message?.includes('authorization')) {
-        toast.error(`Failed to sync Gmail: ${error.message}`);
+      if (!error.message?.includes('Google access') && 
+          !error.message?.includes('authorization') &&
+          !error.message?.includes('Gmail API')) {
+        toast.error(`Failed to sync Gmail: ${error.message || 'Unknown error'}`);
       }
       throw error;
     } finally {

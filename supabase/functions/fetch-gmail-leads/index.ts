@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -32,37 +31,136 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase configuration');
+    }
+
+    console.log('Initializing with Supabase URL:', supabaseUrl);
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('Missing authorization header');
+      return new Response(
+        JSON.stringify({
+          error: 'Missing authorization header',
+          details: 'No authorization token provided in request headers',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
+    console.log('Verifying user token...');
     const { data: { user }, error: userError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
-    if (userError || !user) {
-      throw new Error('Invalid user token');
+    if (userError) {
+      console.error('User verification error:', userError);
+      return new Response(
+        JSON.stringify({
+          error: 'Invalid user token',
+          details: userError.message,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
-    console.log('Processing Gmail fetch for user:', user.id);
+    if (!user) {
+      return new Response(
+        JSON.stringify({
+          error: 'No user found',
+          details: 'User token is valid but no user was found',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log('User verified, fetching profile...');
 
     // Get the user's Google access token from profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('google_access_token')
+      .select('google_access_token, updated_at')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile?.google_access_token) {
-      console.error('Profile error:', profileError);
-      throw new Error('No Google access token found. Please sign out and sign in again with Google to enable Gmail sync.');
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      return new Response(
+        JSON.stringify({
+          error: 'Failed to fetch user profile',
+          details: profileError.message,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
+
+    if (!profile?.google_access_token) {
+      return new Response(
+        JSON.stringify({
+          error: 'No Google access token found',
+          details: 'Please sign out and sign in again with Google to refresh your access token',
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Validate token freshness
+    const tokenUpdatedAt = new Date(profile.updated_at);
+    const tokenAge = Date.now() - tokenUpdatedAt.getTime();
+    if (tokenAge > 3600000) { // Token older than 1 hour
+      console.warn('Token might be stale, age:', tokenAge / 1000, 'seconds');
+    }
+
+    console.log('Testing Google token...');
+    // Test the Google access token
+    const testResponse = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: {
+        'Authorization': `Bearer ${profile.google_access_token}`,
+      },
+    });
+
+    if (!testResponse.ok) {
+      const errorText = await testResponse.text();
+      console.error('Google token validation failed:', errorText);
+      return new Response(
+        JSON.stringify({
+          error: 'Google access token is invalid or expired',
+          details: errorText,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log('Token validated, fetching Gmail messages...');
 
     const accessToken = profile.google_access_token;
     console.log('Using access token for Gmail API (length):', accessToken.length);
@@ -201,11 +299,22 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('Error in fetch-gmail-leads function:', error);
+    const errorResponse = {
+      error: error.message || 'Unknown error occurred',
+      details: error.stack || 'No stack trace available',
+      context: error.context || {},
+      timestamp: new Date().toISOString()
+    };
+
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify(errorResponse),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'X-Error-Type': 'edge-function-error'
+        },
       }
     );
   }
