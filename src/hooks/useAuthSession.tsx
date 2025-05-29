@@ -4,13 +4,21 @@ import { Session, User } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 
-export function useAuthSession() {
+interface AuthSession {
+  session: Session | null;
+  user: User | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+export function useAuthSession(): AuthSession {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  const handleSignInWithGoogle = async () => {
+  const handleSignInWithGoogle = useCallback(async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -31,20 +39,25 @@ export function useAuthSession() {
       toast.error('An unexpected error occurred during Google sign-in.');
       console.error('Unexpected Google sign-in error:', error);
     }
-  };
+  }, []);
 
-  const handleSignOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(`Logout failed: ${error.message}`);
-      console.error('Sign-out error:', error);
-    } else {
-      setSession(null);
-      setUser(null);
-      toast.info('You have been logged out.');
-      navigate('/');
+  const handleSignOut = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        toast.error(`Logout failed: ${error.message}`);
+        console.error('Sign-out error:', error);
+      } else {
+        setSession(null);
+        setUser(null);
+        toast.info('You have been logged out.');
+        navigate('/');
+      }
+    } catch (error) {
+      console.error('Unexpected error during sign out:', error);
+      toast.error('An unexpected error occurred during sign out.');
     }
-  };
+  }, [navigate]);
 
   const updateProfileWithToken = useCallback(async (currentSession: Session) => {
     if (currentSession?.user) {
@@ -111,5 +124,11 @@ export function useAuthSession() {
     };
   }, [updateProfileWithToken]);
 
-  return { session, user, loading, signInWithGoogle: handleSignInWithGoogle, signOut: handleSignOut };
+  return {
+    session,
+    user,
+    loading,
+    signInWithGoogle: handleSignInWithGoogle,
+    signOut: handleSignOut
+  };
 }

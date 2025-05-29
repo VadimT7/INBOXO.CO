@@ -188,90 +188,9 @@ const AnimatedGradientText = ({ children }: { children: string }) => {
 const AnimatedHero = () => {
   const { session } = useAuthSession();
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut",
-      },
-    },
-  };
-
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center">
+    <div className="relative w-full h-full">
       <GlowingBackground />
-      
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 flex flex-col items-center justify-center text-center px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-      >
-        <motion.div variants={itemVariants} className="mb-6">
-          <AnimatedText className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight">
-            Inbox chaos?
-          </AnimatedText>
-          <AnimatedText className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mt-4">
-            <AnimatedGradientText>
-              Turn every lead into cash.
-            </AnimatedGradientText>
-          </AnimatedText>
-        </motion.div>
-
-        <motion.p
-          variants={itemVariants}
-          className="text-xl sm:text-2xl md:text-3xl text-slate-300 mb-12 max-w-3xl"
-        >
-          InboxFlows qualifies, replies to, and organizes leads for you—instantly.
-        </motion.p>
-
-        <motion.div
-          variants={itemVariants}
-          className="flex flex-col sm:flex-row gap-6"
-        >
-          {session ? (
-            <Button 
-              asChild
-              size="lg" 
-              className="font-bold text-lg px-8 py-6 bg-cyan-500 hover:bg-cyan-400 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
-            >
-              <Link to="/leads">
-                <Inbox className="mr-2 h-5 w-5" />
-                View My Leads
-              </Link>
-            </Button>
-          ) : (
-            <Button 
-              asChild
-              size="lg" 
-              className="font-bold text-lg px-8 py-6 bg-cyan-500 hover:bg-cyan-400 text-white shadow-lg transform transition-all duration-200 hover:scale-105"
-            >
-              <Link to="/login">Get Early Access</Link>
-            </Button>
-          )}
-          <Button 
-            variant="outline" 
-            size="lg" 
-            className="font-semibold text-lg px-8 py-6 border-2 border-cyan-400 text-cyan-200 hover:bg-cyan-400 hover:text-slate-900 shadow-md transform transition-all duration-200 hover:scale-105"
-            onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-          >
-            See How It Works
-          </Button>
-        </motion.div>
-      </motion.div>
     </div>
   );
 };
