@@ -52,7 +52,7 @@ const CTASection = () => {
             <Button
               variant="outline"
               size="lg"
-              className="border-white text-white hover:bg-white/10 text-lg px-8"
+              className="border-2 border-white/70 bg-white/10 text-white hover:bg-white/20 hover:text-white text-lg px-8 backdrop-blur-sm"
             >
               Schedule Demo
             </Button>

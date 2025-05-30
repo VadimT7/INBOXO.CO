@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,19 +18,17 @@ interface Lead {
 }
 
 const LeadsPage = () => {
-  const { user, loading: authLoading } = useAuthSession();
+  const { user } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLeads = async () => {
-    if (!user) return;
-
     try {
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', user!.id)
         .order('received_at', { ascending: false });
 
       if (error) {
@@ -84,33 +81,8 @@ const LeadsPage = () => {
   };
 
   useEffect(() => {
-    if (user) {
-      fetchLeads();
-    }
+    fetchLeads();
   }, [user]);
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <Mail className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-700 mb-2">Please sign in</h2>
-          <p className="text-slate-600">You need to be signed in to view your leads</p>
-        </div>
-      </div>
-    );
-  }
 
   const categorizedLeads = {
     hot: leads.filter(lead => lead.status === 'hot'),
@@ -127,6 +99,17 @@ const LeadsPage = () => {
       minute: '2-digit'
     });
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading leads...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
@@ -155,89 +138,83 @@ const LeadsPage = () => {
           </div>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Unclassified Column */}
-            <div>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                  <div className="w-3 h-3 bg-slate-400 rounded-full mr-2"></div>
-                  Unclassified ({categorizedLeads.unclassified.length})
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {categorizedLeads.unclassified.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onStatusChange={updateLeadStatus}
-                  />
-                ))}
-              </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Unclassified Column */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+                <div className="w-3 h-3 bg-slate-400 rounded-full mr-2"></div>
+                Unclassified ({categorizedLeads.unclassified.length})
+              </h2>
             </div>
-
-            {/* Hot Column */}
-            <div>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                  <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                  Hot ({categorizedLeads.hot.length})
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {categorizedLeads.hot.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onStatusChange={updateLeadStatus}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Warm Column */}
-            <div>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                  <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                  Warm ({categorizedLeads.warm.length})
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {categorizedLeads.warm.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onStatusChange={updateLeadStatus}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Cold Column */}
-            <div>
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                  <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                  Cold ({categorizedLeads.cold.length})
-                </h2>
-              </div>
-              <div className="space-y-3">
-                {categorizedLeads.cold.map((lead) => (
-                  <LeadCard
-                    key={lead.id}
-                    lead={lead}
-                    onStatusChange={updateLeadStatus}
-                  />
-                ))}
-              </div>
+            <div className="space-y-3">
+              {categorizedLeads.unclassified.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={updateLeadStatus}
+                />
+              ))}
             </div>
           </div>
-        )}
+
+          {/* Hot Column */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                Hot ({categorizedLeads.hot.length})
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {categorizedLeads.hot.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={updateLeadStatus}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Warm Column */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+                <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                Warm ({categorizedLeads.warm.length})
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {categorizedLeads.warm.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={updateLeadStatus}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Cold Column */}
+          <div>
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
+                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+                Cold ({categorizedLeads.cold.length})
+              </h2>
+            </div>
+            <div className="space-y-3">
+              {categorizedLeads.cold.map((lead) => (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  onStatusChange={updateLeadStatus}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

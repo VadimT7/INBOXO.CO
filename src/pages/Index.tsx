@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown, LogIn, LogOut, Inbox, ArrowRight } from "lucide-react";
-import { useAuthSession } from "@/hooks/useAuthSession";
+import { ChevronDown, ArrowRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import AnimatedHero from "@/components/AnimatedHero";
@@ -9,66 +8,21 @@ import TestimonialsSection from "@/components/testimonials/TestimonialsSection";
 import PricingSection from "@/components/pricing/PricingSection";
 import FAQSection from "@/components/faq/FAQSection";
 import CTASection from "@/components/cta/CTASection";
+import { useState } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 const Index = () => {
-  const { session, user, signOut, loading } = useAuthSession();
+  const [showDemoVideo, setShowDemoVideo] = useState(false);
 
   return (
     <div className="relative">
       {/* Hero Section */}
       <div className="relative min-h-screen bg-gradient-to-b from-slate-900 to-black text-white overflow-hidden">
-        {/* Header for Login/Logout */}
-        <header className="absolute top-0 right-0 p-4 sm:p-6 z-50">
-          {loading ? (
-            <p className="text-sm text-slate-300">Loading user...</p>
-          ) : session ? (
-            <div className="flex items-center space-x-3">
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm"
-              >
-                <Link to="/leads">
-                  <Inbox className="mr-2 h-4 w-4" /> Leads
-                </Link>
-              </Button>
-              <span className="text-sm text-slate-300 hidden sm:inline">
-                {user?.email}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={signOut}
-                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm"
-              >
-                <LogOut className="mr-0 sm:mr-2 h-4 w-4" /> <span className="hidden sm:inline">Logout</span>
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-3">
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm"
-              >
-                <Link to="/pricing">Pricing</Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm"
-              >
-                <Link to="/login">
-                  <LogIn className="mr-2 h-4 w-4" /> Login
-                </Link>
-              </Button>
-            </div>
-          )}
-        </header>
-
         <div className="relative z-10 pt-20 pb-16 sm:pt-24 sm:pb-20 lg:pt-32 lg:pb-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.h1
@@ -111,8 +65,10 @@ const Index = () => {
               <Button
                 variant="outline"
                 size="lg"
-                className="border-3 border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm text-xl px-12 py-8 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
+                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm text-xl px-12 py-8 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
+                onClick={() => setShowDemoVideo(true)}
               >
+                <Play className="w-6 h-6 mr-2" />
                 Watch Demo
               </Button>
             </motion.div>
@@ -157,17 +113,37 @@ const Index = () => {
       {/* Features Section */}
       <FeaturesSection />
 
-      {/* Testimonials Section */}
+      {/* Testimonials */}
       <TestimonialsSection />
 
-      {/* Pricing Section */}
+      {/* Pricing */}
       <PricingSection />
 
-      {/* FAQ Section */}
+      {/* FAQ */}
       <FAQSection />
 
-      {/* CTA Section */}
+      {/* CTA */}
       <CTASection />
+
+      {/* Demo Video Dialog */}
+      <Dialog open={showDemoVideo} onOpenChange={setShowDemoVideo}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>InboxFlow Product Demo</DialogTitle>
+          </DialogHeader>
+          <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden">
+            <video
+              className="w-full h-full"
+              controls
+              autoPlay
+              src="/demo/product-demo.mp4"
+              poster="/demo/demo-thumbnail.jpg"
+            >
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

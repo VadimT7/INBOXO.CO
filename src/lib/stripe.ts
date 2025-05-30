@@ -7,7 +7,10 @@ if (!stripeKey) {
   throw new Error('Missing Stripe publishable key');
 }
 
-const stripePromise = loadStripe(stripeKey);
+// Initialize Stripe with options to handle blocked analytics
+const stripePromise = loadStripe(stripeKey, {
+  betas: ['analytics_disable_beta_1'],
+});
 
 export const createCheckoutSession = async (priceId: string) => {
   try {
@@ -40,12 +43,23 @@ export const createCheckoutSession = async (priceId: string) => {
       throw new Error('Stripe failed to initialize');
     }
 
-    const { error } = await stripe.redirectToCheckout({
-      sessionId,
-    });
+    // Ignore analytics errors
+    try {
+      const { error } = await stripe.redirectToCheckout({
+        sessionId,
+      });
 
-    if (error) {
-      throw new Error(error.message);
+      if (error) {
+        // Only throw if it's not an analytics error
+        if (!error.message?.includes('r.stripe.com') && !error.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
+          throw error;
+        }
+      }
+    } catch (err: any) {
+      // Ignore analytics-related errors
+      if (!err.message?.includes('r.stripe.com') && !err.message?.includes('ERR_BLOCKED_BY_CLIENT')) {
+        throw err;
+      }
     }
   } catch (err) {
     console.error('Error in createCheckoutSession:', err);
