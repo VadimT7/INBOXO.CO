@@ -108,36 +108,37 @@ const FeatureSection = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`relative overflow-hidden rounded-2xl p-8 cursor-pointer transition-all duration-300 ${
+      className={`relative overflow-hidden rounded-2xl p-8 cursor-pointer transition-all duration-300 border-2 ${
         isActive
-          ? 'bg-white shadow-2xl scale-100'
-          : 'bg-slate-50 hover:bg-white hover:shadow-xl scale-95'
+          ? 'bg-white shadow-2xl scale-100 border-transparent bg-gradient-to-br from-slate-50 to-white'
+          : 'bg-slate-50/80 hover:bg-white hover:shadow-xl scale-95 border-slate-200/60 hover:border-slate-300'
       }`}
       onClick={onClick}
     >
-      <div className="relative z-10">
-        <div className={`inline-flex p-3 rounded-lg bg-gradient-to-r ${feature.color}`}>
-          <Icon className="w-6 h-6 text-white" />
+      <div className="relative z-10 flex flex-col items-center text-center">
+        <div className={`inline-flex p-4 rounded-xl bg-gradient-to-r ${feature.color} transform transition-transform duration-300 hover:scale-110 shadow-lg`}>
+          <Icon className="w-8 h-8 text-white" />
         </div>
-        <h3 className="mt-4 text-2xl font-bold text-slate-900">{feature.title}</h3>
-        <p className="mt-2 text-slate-600">{feature.description}</p>
+        <h3 className="mt-6 text-2xl font-bold text-slate-900">{feature.title}</h3>
+        <p className="mt-4 text-slate-600 max-w-sm">{feature.description}</p>
         {isActive && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             transition={{ duration: 0.3 }}
+            className="w-full"
           >
-            <ul className="mt-4 space-y-3">
+            <ul className="mt-6 space-y-4">
               {feature.details.map((detail, i) => (
                 <motion.li
                   key={i}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.1 }}
-                  className="flex items-center text-slate-700"
+                  className="flex items-center justify-center text-slate-700"
                 >
-                  <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${feature.color} mr-3`} />
-                  {detail}
+                  <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${feature.color} mr-3 flex-shrink-0`} />
+                  <span>{detail}</span>
                 </motion.li>
               ))}
             </ul>
@@ -149,6 +150,9 @@ const FeatureSection = ({
           isActive ? 'opacity-5' : 'group-hover:opacity-5'
         }`}
       />
+      <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-5 rounded-2xl transition-opacity duration-300 ${
+        isActive ? 'opacity-10' : 'opacity-0 hover:opacity-10'
+      }`} />
     </motion.div>
   );
 };
@@ -187,19 +191,17 @@ const FeaturesPage = () => {
                   <span className="z-10">Start Free Trial</span>
                   <ArrowRight className="ml-3 h-7 w-7 z-10 group-hover:translate-x-1 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="relative group overflow-hidden border-3 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
+                className="relative group overflow-hidden border-2 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
                 asChild
               >
                 <Link to="/pricing" className="flex items-center">
                   <span className="z-10">View Pricing</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-900 opacity-0 group-hover:opacity-90 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-slate-400 to-slate-600 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
             </div>
@@ -233,16 +235,30 @@ const FeaturesPage = () => {
               Join thousands of businesses that have already streamlined their lead
               conversion process with our powerful features.
             </p>
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600"
-              asChild
-            >
-              <Link to="/login">
-                Get Started Free
-                <Mail className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center">
+              <Button
+                size="lg"
+                className="relative group overflow-hidden bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)]"
+                asChild
+              >
+                <Link to="/login" className="flex items-center">
+                  <span className="z-10">Start Free Trial</span>
+                  <ArrowRight className="ml-3 h-7 w-7 z-10 group-hover:translate-x-1 transition-transform" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
+                </Link>
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="relative group overflow-hidden border-2 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
+                asChild
+              >
+                <Link to="/pricing" className="flex items-center">
+                  <span className="z-10">View Pricing</span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-900 opacity-0 group-hover:opacity-90 transition-opacity duration-300" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </div>

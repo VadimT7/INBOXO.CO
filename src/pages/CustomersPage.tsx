@@ -317,19 +317,17 @@ const CustomersPage = () => {
                   <span className="z-10">Start Free Trial</span>
                   <ArrowRight className="ml-3 h-7 w-7 z-10 group-hover:translate-x-1 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="relative group overflow-hidden border-3 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
+                className="relative group overflow-hidden border-2 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
                 asChild
               >
                 <Link to="/pricing" className="flex items-center">
                   <span className="z-10">View Pricing</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-900 opacity-0 group-hover:opacity-90 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-slate-400 to-slate-600 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
             </div>
@@ -398,19 +396,17 @@ const CustomersPage = () => {
                   <span className="z-10">Start Free Trial</span>
                   <ArrowRight className="ml-3 h-7 w-7 z-10 group-hover:translate-x-1 transition-transform" />
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="relative group overflow-hidden border-3 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
+                className="relative group overflow-hidden border-2 border-slate-400 bg-slate-800/50 text-slate-200 hover:text-white backdrop-blur-sm text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(255,255,255,0.2)]"
                 asChild
               >
                 <Link to="/pricing" className="flex items-center">
                   <span className="z-10">View Pricing</span>
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-slate-900 opacity-0 group-hover:opacity-90 transition-opacity duration-300" />
-                  <div className="absolute -inset-x-1 bottom-0 h-1 bg-gradient-to-r from-slate-400 to-slate-600 transform translate-y-1 group-hover:translate-y-0 transition-transform" />
                 </Link>
               </Button>
             </div>

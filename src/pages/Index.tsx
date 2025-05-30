@@ -23,6 +23,8 @@ const Index = () => {
     <div className="relative">
       {/* Hero Section */}
       <div className="relative min-h-screen bg-gradient-to-b from-slate-900 to-black text-white overflow-hidden">
+        {/* Ethereal blue gradient overlay */}
+        <div className="absolute inset-x-0 bottom-0 h-[30vh] bg-gradient-to-t from-blue-500/10 via-blue-400/5 to-transparent pointer-events-none" />
         <div className="relative z-10 pt-20 pb-16 sm:pt-24 sm:pb-20 lg:pt-32 lg:pb-28">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.h1
