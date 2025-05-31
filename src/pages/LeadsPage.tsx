@@ -24,11 +24,22 @@ const LeadsPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchLeads = async () => {
+    console.log('fetchLeads called, user:', user);
+    
+    if (!user) {
+      console.log('No user, setting loading to false');
+      setLeads([]);
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching leads for user:', user.id);
+      
       const { data, error } = await supabase
         .from('leads')
         .select('*')
-        .eq('user_id', user!.id)
+        .eq('user_id', user.id)
         .order('received_at', { ascending: false });
 
       if (error) {
@@ -37,11 +48,13 @@ const LeadsPage = () => {
         return;
       }
 
+      console.log('Leads fetched successfully:', data?.length || 0);
       setLeads(data || []);
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -81,8 +94,13 @@ const LeadsPage = () => {
   };
 
   useEffect(() => {
-    fetchLeads();
-  }, [user]);
+    console.log('useEffect triggered, user:', user);
+    if (user) {
+      fetchLeads();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id]); // Use user.id instead of user to prevent infinite re-renders
 
   const categorizedLeads = {
     hot: leads.filter(lead => lead.status === 'hot'),
@@ -112,7 +130,7 @@ const LeadsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-slate-50 pt-32 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
