@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const plugin = require('tailwindcss/plugin')
+
 module.exports = {
   darkMode: ["class"],
   content: [
@@ -76,6 +78,32 @@ module.exports = {
         "pulse-glow": {
           "0%, 100%": { opacity: 0.4 },
           "50%": { opacity: 0.8 }
+        },
+        blob: {
+          "0%": {
+            transform: "translate(0px, 0px) scale(1)"
+          },
+          "33%": {
+            transform: "translate(30px, -50px) scale(1.1)"
+          },
+          "66%": {
+            transform: "translate(-20px, 20px) scale(0.9)"
+          },
+          "100%": {
+            transform: "translate(0px, 0px) scale(1)"
+          }
+        },
+        wave: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-50%)" }
+        },
+        "wave-reverse": {
+          "0%": { transform: "translateX(-50%)" },
+          "100%": { transform: "translateX(0)" }
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-20px)" }
         }
       },
       animation: {
@@ -83,9 +111,27 @@ module.exports = {
         "accordion-up": "accordion-up 0.2s ease-out",
         "scroll-left": "scroll-left 30s linear infinite",
         "scroll-right": "scroll-right 30s linear infinite",
-        "pulse": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
-      },
+        "pulse": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "blob": "blob 7s infinite",
+        "wave": "wave 20s linear infinite",
+        "wave-reverse": "wave-reverse 15s linear infinite",
+        "float": "float 6s ease-in-out infinite",
+        "float-delay": "float 6s ease-in-out infinite 2s",
+        "float-slow": "float 8s ease-in-out infinite 1s"
+      }
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        ".animation-delay-2000": {
+          "animation-delay": "2s",
+        },
+        ".animation-delay-4000": {
+          "animation-delay": "4s",
+        },
+      });
+    }),
+  ],
 } 

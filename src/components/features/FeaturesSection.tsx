@@ -1,5 +1,5 @@
 import { motion, useMotionValue } from 'framer-motion';
-import { Inbox, Zap, Clock, Bot, BarChart, Shield } from 'lucide-react';
+import { Inbox, Zap, Clock, Bot, BarChart, Shield, BrainCircuit } from 'lucide-react';
 
 const features = [
   {
@@ -49,6 +49,14 @@ const features = [
     gradient: "from-teal-500 to-cyan-500",
     color: "teal",
     size: "small"
+  },
+  {
+    icon: <BrainCircuit className="w-8 h-8" />,
+    title: "Smart Follow-up Intelligence",
+    description: "AI-driven timing suggestions and personalized follow-up sequences for optimal engagement.",
+    gradient: "from-rose-500 to-pink-500",
+    color: "rose",
+    size: "medium"
   }
 ];
 

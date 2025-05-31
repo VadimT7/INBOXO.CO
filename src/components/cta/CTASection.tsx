@@ -44,11 +44,13 @@ const CTASection = () => {
           >
             <Button
               size="lg"
-              className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8"
+              className="relative group overflow-hidden bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)]"
             >
-              Start Free Trial
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <span className="z-10">Start Free Trial</span>
+              <ArrowRight className="ml-3 h-7 w-7 z-10 group-hover:translate-x-1 transition-transform" />
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
             </Button>
+            {/* Commented out Schedule Demo button
             <Button
               variant="outline"
               size="lg"
@@ -56,6 +58,7 @@ const CTASection = () => {
             >
               Schedule Demo
             </Button>
+            */}
           </motion.div>
 
           <motion.p
