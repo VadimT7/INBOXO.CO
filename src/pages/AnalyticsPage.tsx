@@ -311,8 +311,8 @@ const AnalyticsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-32 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-24 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto mt-32">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
