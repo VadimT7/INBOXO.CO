@@ -1,10 +1,11 @@
 import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from '@/integrations/supabase/client';
 
-const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+// Use environment variable if available, otherwise you'll need to set your publishable key here
+const stripeKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_test_your_stripe_publishable_key_here';
 
-if (!stripeKey) {
-  throw new Error('Missing Stripe publishable key');
+if (!stripeKey || stripeKey === 'pk_test_your_stripe_publishable_key_here') {
+  console.warn('Stripe publishable key not configured. Please set VITE_STRIPE_PUBLISHABLE_KEY or update the stripeKey variable in src/lib/stripe.ts');
 }
 
 // Initialize Stripe with options to handle blocked analytics
@@ -65,4 +66,4 @@ export const createCheckoutSession = async (priceId: string) => {
     console.error('Error in createCheckoutSession:', err);
     throw err;
   }
-}; 
+};
