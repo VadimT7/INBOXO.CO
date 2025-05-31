@@ -83,15 +83,15 @@ const Index = () => {
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">50%</div>
+                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">92%</div>
                 <div className="text-lg sm:text-xl">Faster Response Time</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">2x</div>
+                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">4.3x</div>
                 <div className="text-lg sm:text-xl">Lead Conversion</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">8hrs</div>
+                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">16hrs</div>
                 <div className="text-lg sm:text-xl">Saved Weekly</div>
               </div>
             </motion.div>

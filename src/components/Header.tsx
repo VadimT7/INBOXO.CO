@@ -1,13 +1,18 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, Inbox } from "lucide-react";
+import { LogIn, LogOut, Inbox, BarChart2, Settings, HelpCircle } from "lucide-react";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const Header = () => {
   const { session, user, signOut, loading } = useAuthSession();
   const isVisible = useScrollDirection();
+  const location = useLocation();
+
+  // Check if we're on a dashboard page (leads, analytics, settings, help)
+  const isDashboardPage = session && ['/leads', '/analytics', '/settings', '/help'].includes(location.pathname);
 
   return (
     <AnimatePresence>
@@ -20,14 +25,22 @@ const Header = () => {
           className="fixed top-0 left-0 right-0 z-50"
         >
           {/* Background with blur effect */}
-          <div className="absolute inset-0 bg-slate-900/75 backdrop-blur-md"></div>
+          <div className={cn(
+            "absolute inset-0 backdrop-blur-md",
+            isDashboardPage 
+              ? "bg-gradient-to-r from-blue-600 to-blue-700" 
+              : "bg-slate-900/75"
+          )}></div>
 
           {/* Header content */}
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
             <div className="relative flex items-center justify-between">
               {/* Left side - Logo */}
-              <Link to="/" className="text-white text-xl font-semibold flex items-center space-x-2 hover:opacity-80 transition-opacity">
-                <div className="w-8 h-8 rounded bg-blue-500 flex items-center justify-center">
+              <Link to={session ? "/leads" : "/"} className="text-white text-xl font-semibold flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                <div className={cn(
+                  "w-8 h-8 rounded flex items-center justify-center",
+                  isDashboardPage ? "bg-white/20" : "bg-blue-500"
+                )}>
                   <span className="text-white font-bold text-xl">IF</span>
                 </div>
                 <span>InboxFlow</span>
@@ -36,77 +49,148 @@ const Header = () => {
               {/* Center - Navigation */}
               <nav className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                 <ul className="flex items-center space-x-2 sm:space-x-8">
-                  <li>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="lg"
-                      className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                      <Link to="/features">Features</Link>
-                    </Button>
-                  </li>
-                  <li>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="lg"
-                      className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                      <Link to="/customers">Customers</Link>
-                    </Button>
-                  </li>
-                  <li>
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="lg"
-                      className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
-                    >
-                      <Link to="/pricing">Pricing</Link>
-                    </Button>
-                  </li>
-                </ul>
-              </nav>
-
-              {/* Right side - Auth */}
-              <div className="flex items-center space-x-4">
-                {!loading && (
-                  <>
-                    {session ? (
-                      <>
+                  {session ? (
+                    <>
+                      <li>
                         <Button
                           asChild
                           variant="ghost"
-                          className="text-white hover:bg-white/10"
+                          size="lg"
+                          className={cn(
+                            "text-white text-lg font-medium transition-colors",
+                            isDashboardPage 
+                              ? "hover:bg-white/10 data-[state=open]:bg-white/10" 
+                              : "hover:bg-white/10 hover:text-white"
+                          )}
                         >
                           <Link to="/leads">
                             <Inbox className="w-5 h-5 mr-2" />
                             Leads
                           </Link>
                         </Button>
+                      </li>
+                      <li>
                         <Button
+                          asChild
                           variant="ghost"
-                          className="text-white hover:bg-white/10"
-                          onClick={() => signOut()}
+                          size="lg"
+                          className={cn(
+                            "text-white text-lg font-medium transition-colors",
+                            isDashboardPage 
+                              ? "hover:bg-white/10 data-[state=open]:bg-white/10" 
+                              : "hover:bg-white/10 hover:text-white"
+                          )}
                         >
-                          <LogOut className="w-5 h-5 mr-2" />
-                          Sign Out
+                          <Link to="/analytics">
+                            <BarChart2 className="w-5 h-5 mr-2" />
+                            Analytics
+                          </Link>
                         </Button>
-                      </>
-                    ) : (
-                      <Button
-                        asChild
-                        variant="ghost"
-                        className="text-white hover:bg-white/10"
-                      >
-                        <Link to="/login">
-                          <LogIn className="w-5 h-5 mr-2" />
-                          Sign In
-                        </Link>
-                      </Button>
+                      </li>
+                      <li>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="lg"
+                          className={cn(
+                            "text-white text-lg font-medium transition-colors",
+                            isDashboardPage 
+                              ? "hover:bg-white/10 data-[state=open]:bg-white/10" 
+                              : "hover:bg-white/10 hover:text-white"
+                          )}
+                        >
+                          <Link to="/settings">
+                            <Settings className="w-5 h-5 mr-2" />
+                            Settings
+                          </Link>
+                        </Button>
+                      </li>
+                      <li>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="lg"
+                          className={cn(
+                            "text-white text-lg font-medium transition-colors",
+                            isDashboardPage 
+                              ? "hover:bg-white/10 data-[state=open]:bg-white/10" 
+                              : "hover:bg-white/10 hover:text-white"
+                          )}
+                        >
+                          <Link to="/help">
+                            <HelpCircle className="w-5 h-5 mr-2" />
+                            Help
+                          </Link>
+                        </Button>
+                      </li>
+                    </>
+                  ) : (
+                    <>
+                      <li>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="lg"
+                          className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
+                        >
+                          <Link to="/features">Features</Link>
+                        </Button>
+                      </li>
+                      <li>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="lg"
+                          className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
+                        >
+                          <Link to="/customers">Customers</Link>
+                        </Button>
+                      </li>
+                      <li>
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="lg"
+                          className="text-white text-lg font-medium hover:bg-white/10 hover:text-white transition-colors"
+                        >
+                          <Link to="/pricing">Pricing</Link>
+                        </Button>
+                      </li>
+                    </>
+                  )}
+                </ul>
+              </nav>
+
+              {/* Right side - Auth */}
+              <div className="flex items-center space-x-4">
+                {session ? (
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "text-white transition-colors",
+                      isDashboardPage 
+                        ? "hover:bg-white/10" 
+                        : "hover:bg-white/10"
                     )}
-                  </>
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      await signOut();
+                    }}
+                  >
+                    <LogOut className="w-5 h-5 mr-2" />
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Button
+                    asChild
+                    variant="ghost"
+                    className="text-white hover:bg-white/10"
+                  >
+                    <Link to="/login">
+                      <LogIn className="w-5 h-5 mr-2" />
+                      Sign In
+                    </Link>
+                  </Button>
                 )}
               </div>
             </div>

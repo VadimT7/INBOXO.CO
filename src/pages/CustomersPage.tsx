@@ -146,11 +146,11 @@ const CustomerStory = ({
         initial={{ opacity: 0, y: 20 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
-        className={`relative overflow-hidden rounded-2xl transition-all duration-500 ${
+        className={`relative overflow-hidden rounded-2xl transition-all duration-500 cursor-pointer ${
           isActive 
             ? 'bg-white shadow-[0_0_50px_-12px_rgba(234,179,8,0.3)] hover:shadow-[0_0_50px_-6px_rgba(234,179,8,0.5)]' 
-            : 'bg-slate-50/80 hover:bg-white hover:shadow-[0_0_30px_-12px_rgba(234,179,8,0.2)]'
-        } scale-${isActive ? '100' : '95'}`}
+            : 'bg-white/40 hover:bg-white hover:shadow-[0_0_30px_-12px_rgba(234,179,8,0.2)] border border-slate-200'
+        } scale-${isActive ? '100' : '95'} p-8`}
         onClick={onClick}
       >
         {/* Golden glow effect */}
@@ -280,10 +280,10 @@ const CustomersPage = () => {
   const [activeCustomer, setActiveCustomer] = useState<string>(customers[0].id);
 
   const aggregateStats = {
-    avgResponseTime: '72%',
-    avgConversionIncrease: '2.3x',
+    avgResponseTime: '92%',
+    avgConversionIncrease: '4.3x',
     avgTimeSaved: '16',
-    avgRevenueGrowth: '65'
+    avgRevenueGrowth: '113'
   };
 
   return (
@@ -363,7 +363,7 @@ const CustomersPage = () => {
 
       {/* Customer Stories Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 mt-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {customers.map((customer) => (
             <CustomerStory
               key={customer.id}

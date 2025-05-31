@@ -43,16 +43,24 @@ export function useAuthSession(): AuthSession {
 
   const handleSignOut = useCallback(async () => {
     try {
+      // First clear the local state
+      setSession(null);
+      setUser(null);
+
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast.error(`Logout failed: ${error.message}`);
         console.error('Sign-out error:', error);
-      } else {
-        setSession(null);
-        setUser(null);
-        toast.info('You have been logged out.');
-        navigate('/');
+        return;
       }
+
+      // Clear any stored tokens or state
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Show success message and navigate
+      toast.success('Successfully signed out');
+      navigate('/', { replace: true });
     } catch (error) {
       console.error('Unexpected error during sign out:', error);
       toast.error('An unexpected error occurred during sign out.');
@@ -92,32 +100,42 @@ export function useAuthSession(): AuthSession {
 
   useEffect(() => {
     setLoading(true);
+    
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       if (currentSession) {
         updateProfileWithToken(currentSession);
-        navigate('/leads');
       }
       setLoading(false);
     });
 
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, currentSession) => {
-        console.log('Auth state change:', _event);
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
+      async (event, currentSession) => {
+        console.log('Auth state change:', event);
+        
+        if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
+          navigate('/', { replace: true });
+        } else {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          
+          if (event === 'SIGNED_IN' && currentSession) {
+            toast.success("You're in. Let's organize your leads.");
+            await updateProfileWithToken(currentSession);
+            navigate('/leads');
+          }
+          if (event === 'TOKEN_REFRESHED' && currentSession) {
+            console.log('Token refreshed, updating profile...');
+            await updateProfileWithToken(currentSession);
+          }
+        }
+        
         setLoading(false);
-
-        if (_event === 'SIGNED_IN' && currentSession) {
-          toast.success("You're in. Let's organize your leads.");
-          await updateProfileWithToken(currentSession);
-          navigate('/leads');
-        }
-        if (_event === 'TOKEN_REFRESHED' && currentSession) {
-          console.log('Token refreshed, updating profile...');
-          await updateProfileWithToken(currentSession);
-        }
       }
     );
 
