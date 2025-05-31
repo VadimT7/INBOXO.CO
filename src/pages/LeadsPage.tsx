@@ -137,7 +137,7 @@ const LeadsPage = () => {
     <div className="min-h-screen bg-slate-50 pt-32 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-8 mt-20">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Lead Classification</h1>
