@@ -23,7 +23,7 @@ export function useAuthSession(): AuthSession {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: `${window.location.origin}/leads`,
           scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
           queryParams: {
             access_type: 'offline',
@@ -97,6 +97,7 @@ export function useAuthSession(): AuthSession {
       setUser(currentSession?.user ?? null);
       if (currentSession) {
         updateProfileWithToken(currentSession);
+        navigate('/leads');
       }
       setLoading(false);
     });
@@ -111,6 +112,7 @@ export function useAuthSession(): AuthSession {
         if (_event === 'SIGNED_IN' && currentSession) {
           toast.success("You're in. Let's organize your leads.");
           await updateProfileWithToken(currentSession);
+          navigate('/leads');
         }
         if (_event === 'TOKEN_REFRESHED' && currentSession) {
           console.log('Token refreshed, updating profile...');
@@ -122,7 +124,7 @@ export function useAuthSession(): AuthSession {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [updateProfileWithToken]);
+  }, [updateProfileWithToken, navigate]);
 
   return {
     session,

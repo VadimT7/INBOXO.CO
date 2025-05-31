@@ -8,6 +8,7 @@ import TestimonialsSection from "@/components/testimonials/TestimonialsSection";
 import PricingSection from "@/components/pricing/PricingSection";
 import FAQSection from "@/components/faq/FAQSection";
 import CTASection from "@/components/cta/CTASection";
+import LogoScroll from "@/components/LogoScroll";
 import { useState } from 'react';
 import {
   Dialog,
@@ -111,6 +112,9 @@ const Index = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Logo Scroll Section */}
+      <LogoScroll />
 
       {/* Features Section */}
       <FeaturesSection />

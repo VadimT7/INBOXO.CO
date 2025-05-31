@@ -11,8 +11,12 @@ import SuccessPage from "./pages/SuccessPage";
 import PricingPage from "./pages/PricingPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import CustomersPage from "./pages/CustomersPage";
+import AboutPage from "./pages/AboutPage";
+import PrivacyPage from "./pages/PrivacyPage";
+import TermsPage from "./pages/TermsPage";
 import PrivateRoute from "./components/auth/PrivateRoute";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 
 const queryClient = new QueryClient();
 
@@ -22,31 +26,39 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Header />
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/pricing" element={<PricingPage />} />
-          <Route path="/features" element={<FeaturesPage />} />
-          <Route path="/customers" element={<CustomersPage />} />
-          <Route
-            path="/leads"
-            element={
-              <PrivateRoute>
-                <LeadsPage />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/success"
-            element={
-              <PrivateRoute>
-                <SuccessPage />
-              </PrivateRoute>
-            }
-          />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <div className="flex flex-col min-h-screen">
+          <Header />
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/customers" element={<CustomersPage />} />
+              <Route path="/about" element={<AboutPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route
+                path="/leads"
+                element={
+                  <PrivateRoute>
+                    <LeadsPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/success"
+                element={
+                  <PrivateRoute>
+                    <SuccessPage />
+                  </PrivateRoute>
+                }
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

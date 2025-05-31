@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -11,8 +10,8 @@ const LoginPage = () => {
 
   useEffect(() => {
     if (session) {
-      // If user is already logged in, redirect to home page
-      navigate('/');
+      // If user is already logged in, redirect to leads page
+      navigate('/leads');
     }
   }, [session, navigate]);
 
@@ -26,12 +25,10 @@ const LoginPage = () => {
 
   // If session exists after loading and useEffect hasn't redirected, it means user just logged in
   // but the redirect effect might not have run yet. This state is brief.
-  // Or, if the effect already ran, they are already on their way to '/'.
-  // So, if there's a session, we don't need to render the login button.
   if (session) {
-     return (
+    return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
-        <p>Redirecting...</p>
+        <p>Redirecting to leads...</p>
       </div>
     );
   }
