@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import LoginPage from "./pages/LoginPage";
 import LeadsPage from "./pages/LeadsPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import SuccessPage from "./pages/SuccessPage";
 import PricingPage from "./pages/PricingPage";
 import FeaturesPage from "./pages/FeaturesPage";
@@ -43,6 +44,14 @@ const App = () => (
             element={
               <PrivateRoute>
                 <LeadsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <PrivateRoute>
+                <AnalyticsPage />
               </PrivateRoute>
             }
           />
