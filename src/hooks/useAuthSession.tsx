@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -16,6 +17,7 @@ export function useAuthSession(): AuthSession {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
   const navigate = useNavigate();
 
   const handleSignInWithGoogle = useCallback(async () => {
@@ -68,52 +70,85 @@ export function useAuthSession(): AuthSession {
   }, [navigate]);
 
   const updateProfileWithToken = useCallback(async (currentSession: Session) => {
-    if (currentSession?.user) {
+    if (currentSession?.user && currentSession.provider_token) {
       console.log('Attempting to save Google access token for user:', currentSession.user.id);
       
-      // Always use provider_token for immediate access
-      if (!currentSession.provider_token) {
-        console.error('No provider token available in session');
-        toast.error('Google access token not available. Please sign out and sign in again.');
-        return;
-      }
+      try {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .upsert(
+            {
+              id: currentSession.user.id,
+              google_access_token: currentSession.provider_token,
+              updated_at: new Date().toISOString()
+            },
+            { onConflict: 'id' }
+          );
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .upsert(
-          {
-            id: currentSession.user.id,
-            google_access_token: currentSession.provider_token,
-            updated_at: new Date().toISOString()
-          },
-          { onConflict: 'id' }
-        );
-
-      if (profileError) {
-        toast.error(`Failed to save profile: ${profileError.message}`);
-        console.error('Error saving profile/token:', profileError);
-      } else {
-        console.log('Google access token saved successfully');
+        if (profileError) {
+          toast.error(`Failed to save profile: ${profileError.message}`);
+          console.error('Error saving profile/token:', profileError);
+        } else {
+          console.log('Google access token saved successfully');
+        }
+      } catch (error) {
+        console.error('Error updating profile with token:', error);
       }
+    } else if (currentSession?.user && !currentSession.provider_token) {
+      console.error('No provider token available in session');
+      toast.error('Google access token not available. Please sign out and sign in again.');
     }
   }, []);
 
   useEffect(() => {
-    setLoading(true);
+    console.log('Auth hook initializing...');
     
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-      if (currentSession) {
-        updateProfileWithToken(currentSession);
+    // Prevent multiple initializations
+    if (initialized) {
+      console.log('Already initialized, skipping...');
+      return;
+    }
+
+    let mounted = true;
+
+    const initializeAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+
+        console.log('Initial session:', currentSession ? 'Found' : 'None');
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+        
+        if (currentSession) {
+          // Use setTimeout to defer the profile update to avoid blocking
+          setTimeout(() => {
+            if (mounted) {
+              updateProfileWithToken(currentSession);
+            }
+          }, 0);
+        }
+        
+        setLoading(false);
+        setInitialized(true);
+      } catch (error) {
+        console.error('Error getting initial session:', error);
+        if (mounted) {
+          setLoading(false);
+          setInitialized(true);
+        }
       }
-      setLoading(false);
-    });
+    };
+
+    initializeAuth();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!mounted) return;
+        
         console.log('Auth state change:', event);
         
         if (event === 'SIGNED_OUT') {
@@ -126,23 +161,35 @@ export function useAuthSession(): AuthSession {
           
           if (event === 'SIGNED_IN' && currentSession) {
             toast.success("You're in. Let's organize your leads.");
-            await updateProfileWithToken(currentSession);
-            navigate('/leads');
+            // Use setTimeout to defer navigation and profile update
+            setTimeout(() => {
+              if (mounted) {
+                updateProfileWithToken(currentSession);
+                navigate('/leads');
+              }
+            }, 0);
           }
           if (event === 'TOKEN_REFRESHED' && currentSession) {
             console.log('Token refreshed, updating profile...');
-            await updateProfileWithToken(currentSession);
+            setTimeout(() => {
+              if (mounted) {
+                updateProfileWithToken(currentSession);
+              }
+            }, 0);
           }
         }
         
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     );
 
     return () => {
+      mounted = false;
       subscription?.unsubscribe();
     };
-  }, [updateProfileWithToken, navigate]);
+  }, []); // Remove all dependencies to prevent re-initialization
 
   return {
     session,

@@ -18,13 +18,13 @@ interface Lead {
 }
 
 const LeadsPage = () => {
-  const { user } = useAuthSession();
+  const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchLeads = async () => {
-    console.log('fetchLeads called, user:', user);
+    console.log('fetchLeads called, user:', user?.id);
     
     if (!user) {
       console.log('No user, setting loading to false');
@@ -94,13 +94,17 @@ const LeadsPage = () => {
   };
 
   useEffect(() => {
-    console.log('useEffect triggered, user:', user);
-    if (user) {
+    console.log('LeadsPage useEffect triggered, authLoading:', authLoading, 'user:', user?.id);
+    
+    // Only fetch leads when auth is not loading and we have a user
+    if (!authLoading && user) {
       fetchLeads();
-    } else {
+    } else if (!authLoading && !user) {
+      // Auth is done loading but no user - clear leads and stop loading
+      setLeads([]);
       setLoading(false);
     }
-  }, [user?.id]); // Use user.id instead of user to prevent infinite re-renders
+  }, [authLoading, user?.id]); // Depend on authLoading and user.id
 
   const categorizedLeads = {
     hot: leads.filter(lead => lead.status === 'hot'),
@@ -118,7 +122,7 @@ const LeadsPage = () => {
     });
   };
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
