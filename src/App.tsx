@@ -27,35 +27,35 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <div className="flex flex-col min-h-screen">
-          <Header />
+        <Header />
           <main className="flex-grow">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/features" element={<FeaturesPage />} />
-              <Route path="/customers" element={<CustomersPage />} />
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/customers" element={<CustomersPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
-              <Route
-                path="/leads"
-                element={
-                  <PrivateRoute>
-                    <LeadsPage />
-                  </PrivateRoute>
-                }
-              />
-              <Route
-                path="/success"
-                element={
-                  <PrivateRoute>
-                    <SuccessPage />
-                  </PrivateRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+          <Route
+            path="/leads"
+            element={
+              <PrivateRoute>
+                <LeadsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/success"
+            element={
+              <PrivateRoute>
+                <SuccessPage />
+              </PrivateRoute>
+            }
+          />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
           </main>
           <Footer />
         </div>
