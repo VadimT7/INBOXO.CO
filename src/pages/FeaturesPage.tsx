@@ -108,7 +108,7 @@ const FeatureSection = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className={`relative overflow-hidden rounded-2xl p-8 cursor-pointer transition-all duration-300 border-2 ${
+      className={`relative overflow-hidden rounded-2xl p-8 cursor-pointer transition-all duration-300 border-2 group ${
         isActive
           ? 'bg-white shadow-2xl scale-100 border-transparent bg-gradient-to-br from-slate-50 to-white'
           : 'bg-slate-50/80 hover:bg-white hover:shadow-xl scale-95 border-slate-200/60 hover:border-slate-300'
@@ -121,6 +121,24 @@ const FeatureSection = ({
         </div>
         <h3 className="mt-6 text-2xl font-bold text-slate-900">{feature.title}</h3>
         <p className="mt-4 text-slate-600 max-w-sm">{feature.description}</p>
+        
+        {!isActive && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="mt-6"
+          >
+            <span className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-gradient-to-r ${feature.color} text-white opacity-90 hover:opacity-100 transition-all duration-300 relative group overflow-hidden`}>
+              <span className="relative z-10 flex items-center">
+                Discover More
+                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform duration-300" />
+              </span>
+              {/* Glowing effect */}
+              <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-white/20 via-transparent to-white/20 group-hover:animate-pulse" />
+            </span>
+          </motion.div>
+        )}
+
         {isActive && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -145,6 +163,8 @@ const FeatureSection = ({
           </motion.div>
         )}
       </div>
+
+      {/* Card background effects */}
       <div
         className={`absolute inset-0 bg-gradient-to-r ${feature.color} opacity-0 transition-opacity duration-300 ${
           isActive ? 'opacity-5' : 'group-hover:opacity-5'

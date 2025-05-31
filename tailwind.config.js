@@ -73,12 +73,17 @@ module.exports = {
           from: { transform: "translateX(-50%)" },
           to: { transform: "translateX(0)" },
         },
+        "pulse-glow": {
+          "0%, 100%": { opacity: 0.4 },
+          "50%": { opacity: 0.8 }
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "scroll-left": "scroll-left 30s linear infinite",
         "scroll-right": "scroll-right 30s linear infinite",
+        "pulse": "pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite"
       },
     },
   },
