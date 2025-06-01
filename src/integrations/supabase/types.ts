@@ -14,6 +14,8 @@ export type Database = {
           created_at: string
           gmail_message_id: string
           id: string
+          is_archived: boolean | null
+          notes: string | null
           received_at: string
           sender_email: string
           snippet: string | null
@@ -26,6 +28,8 @@ export type Database = {
           created_at?: string
           gmail_message_id: string
           id?: string
+          is_archived?: boolean | null
+          notes?: string | null
           received_at: string
           sender_email: string
           snippet?: string | null
@@ -38,6 +42,8 @@ export type Database = {
           created_at?: string
           gmail_message_id?: string
           id?: string
+          is_archived?: boolean | null
+          notes?: string | null
           received_at?: string
           sender_email?: string
           snippet?: string | null
@@ -66,12 +72,53 @@ export type Database = {
         }
         Relationships: []
       }
+      user_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_activity_date: string | null
+          leads_classified_today: number | null
+          streak_days: number | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          leads_classified_today?: number | null
+          streak_days?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          leads_classified_today?: number | null
+          streak_days?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_profiles_setup: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          has_table: boolean
+          has_google_token_column: boolean
+          has_service_role_access: boolean
+          row_count: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
