@@ -72,14 +72,37 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('User verified, ID:', user.id);
 
-    // Get the user's Google access token from profiles table
-    const { data: profile, error: profileError } = await supabase
+    // Get or create the user's profile
+    console.log('Fetching user profile...');
+    let { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('google_access_token')
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
+    if (profileError && profileError.code === 'PGRST116') {
+      // Profile doesn't exist, create it
+      console.log('Profile not found, creating new profile...');
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          updated_at: new Date().toISOString()
+        })
+        .select('google_access_token')
+        .single();
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create user profile' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      profile = newProfile;
+      console.log('Profile created successfully');
+    } else if (profileError) {
       console.error('Profile fetch error:', profileError);
       return new Response(
         JSON.stringify({ error: 'Failed to fetch user profile' }),
@@ -90,7 +113,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!profile?.google_access_token) {
       console.error('No Google access token found for user');
       return new Response(
-        JSON.stringify({ error: 'No Google access token found. Please sign out and sign in again with Google.' }),
+        JSON.stringify({ error: 'No Google access token found. Please sign out and sign in again with Google to enable Gmail sync.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
