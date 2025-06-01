@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -14,6 +15,8 @@ export interface Database {
           created_at: string
           gmail_message_id: string
           id: string
+          is_archived: boolean | null
+          notes: string | null
           received_at: string
           sender_email: string
           snippet: string | null
@@ -26,6 +29,8 @@ export interface Database {
           created_at?: string
           gmail_message_id: string
           id?: string
+          is_archived?: boolean | null
+          notes?: string | null
           received_at: string
           sender_email: string
           snippet?: string | null
@@ -38,6 +43,8 @@ export interface Database {
           created_at?: string
           gmail_message_id?: string
           id?: string
+          is_archived?: boolean | null
+          notes?: string | null
           received_at?: string
           sender_email?: string
           snippet?: string | null
@@ -124,6 +131,39 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      }
+      user_stats: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_activity_date: string | null
+          leads_classified_today: number | null
+          streak_days: number | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          leads_classified_today?: number | null
+          streak_days?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_activity_date?: string | null
+          leads_classified_today?: number | null
+          streak_days?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
