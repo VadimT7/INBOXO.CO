@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LogIn, LogOut, Inbox, BarChart2, Settings, HelpCircle } from "lucide-react";
+import { LogIn, LogOut, Inbox, BarChart2, Settings, DollarSign } from "lucide-react";
 import { useAuthSession } from "@/hooks/useAuthSession";
 import { useScrollDirection } from "@/hooks/useScrollDirection";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,8 +21,8 @@ const Header = () => {
   const location = useLocation();
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
 
-  // Check if we're on a dashboard page (leads, analytics, settings, help)
-  const isDashboardPage = session && ['/leads', '/analytics', '/settings', '/help'].includes(location.pathname);
+  // Check if we're on a dashboard page (leads, analytics, settings, revenue)
+  const isDashboardPage = session && ['/leads', '/analytics', '/settings', '/revenue'].includes(location.pathname);
 
   const handleSignOut = async () => {
     setShowSignOutDialog(false);
@@ -115,9 +115,9 @@ const Header = () => {
                                 : "hover:bg-white/10 hover:text-white"
                             )}
                           >
-                            <Link to="/settings">
-                              <Settings className="w-5 h-5 mr-2" />
-                              Settings
+                            <Link to="/revenue">
+                              <DollarSign className="w-5 h-5 mr-2" />
+                              Revenue
                             </Link>
                           </Button>
                         </li>
@@ -133,9 +133,9 @@ const Header = () => {
                                 : "hover:bg-white/10 hover:text-white"
                             )}
                           >
-                            <Link to="/help">
-                              <HelpCircle className="w-5 h-5 mr-2" />
-                              Help
+                            <Link to="/settings">
+                              <Settings className="w-5 h-5 mr-2" />
+                              Settings
                             </Link>
                           </Button>
                         </li>

@@ -9,6 +9,7 @@ import LoginPage from "./pages/LoginPage";
 import LeadsPage from "./pages/LeadsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
+import RevenuePage from "./pages/RevenuePage";
 import SuccessPage from "./pages/SuccessPage";
 import PricingPage from "./pages/PricingPage";
 import FeaturesPage from "./pages/FeaturesPage";
@@ -61,6 +62,14 @@ const App = () => (
             element={
               <PrivateRoute>
                 <SettingsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/revenue"
+            element={
+              <PrivateRoute>
+                <RevenuePage />
               </PrivateRoute>
             }
           />
