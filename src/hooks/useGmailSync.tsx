@@ -18,16 +18,7 @@ export function useGmailSync() {
         return;
       }
 
-      console.log('Session found, checking token...');
-      
-      // Check if we have a Google provider token
-      if (!session.session.provider_token) {
-        console.error('No Google provider token found');
-        toast.error('Google access expired. Please sign out and sign in again with Google.');
-        return;
-      }
-
-      console.log('Invoking fetch-gmail-leads function...');
+      console.log('Session found, invoking fetch-gmail-leads function...');
       
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
         headers: {
@@ -40,15 +31,21 @@ export function useGmailSync() {
       if (error) {
         console.error('Edge function error:', error);
         
-        // Handle specific error cases
-        if (error.message?.includes('Google access token')) {
+        // Handle specific error cases with more detailed messages
+        const errorMessage = error.message || 'Unknown error';
+        
+        if (errorMessage.includes('Google access token')) {
           toast.error('Google access expired. Please sign out and sign in again with Google to re-enable Gmail sync.');
-        } else if (error.message?.includes('Gmail API')) {
+        } else if (errorMessage.includes('Gmail API')) {
           toast.error('Gmail API access denied. Please ensure you granted Gmail permissions when signing in.');
-        } else if (error.message?.includes('401') || error.message?.includes('unauthorized')) {
+        } else if (errorMessage.includes('401') || errorMessage.includes('unauthorized')) {
           toast.error('Authentication failed. Please sign out and sign in again.');
+        } else if (errorMessage.includes('403')) {
+          toast.error('Access denied. Please check your Gmail permissions.');
+        } else if (errorMessage.includes('No Google access token found')) {
+          toast.error('No Google access token found. Please sign out and sign in again with Google.');
         } else {
-          toast.error(`Failed to sync Gmail: ${error.message || 'Unknown error'}`);
+          toast.error(`Failed to sync Gmail: ${errorMessage}`);
         }
         
         throw error;
@@ -73,12 +70,14 @@ export function useGmailSync() {
       console.error('Gmail sync error:', error);
       
       // Only show generic error if we haven't already shown a specific one
-      if (!error.message?.includes('Google access') && 
-          !error.message?.includes('authorization') &&
-          !error.message?.includes('Gmail API') &&
-          !error.message?.includes('sign in') &&
-          !error.message?.includes('sign out')) {
-        toast.error(`Failed to sync Gmail: ${error.message || 'Unknown error'}`);
+      const errorMessage = error.message || 'Unknown error';
+      if (!errorMessage.includes('Google access') && 
+          !errorMessage.includes('authorization') &&
+          !errorMessage.includes('Gmail API') &&
+          !errorMessage.includes('sign in') &&
+          !errorMessage.includes('sign out') &&
+          !errorMessage.includes('Access denied')) {
+        toast.error(`Failed to sync Gmail: ${errorMessage}`);
       }
       throw error;
     } finally {

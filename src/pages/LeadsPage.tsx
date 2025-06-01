@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
@@ -38,15 +38,6 @@ interface Lead {
   is_archived?: boolean;
 }
 
-interface UserStats {
-  id?: string;
-  user_id: string;
-  total_points: number;
-  leads_classified_today: number;
-  last_activity_date: string;
-  streak_days: number;
-}
-
 const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
@@ -55,7 +46,6 @@ const LeadsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats | null>(null);
   const [notes, setNotes] = useState('');
   const [showArchived, setShowArchived] = useState(false);
 
@@ -88,91 +78,6 @@ const LeadsPage = () => {
     }
   };
 
-  const fetchUserStats = async () => {
-    if (!user) return;
-
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      let { data, error } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code === 'PGRST116') {
-        // No stats found, create initial stats
-        const newStats: UserStats = {
-          user_id: user.id,
-          total_points: 0,
-          leads_classified_today: 0,
-          last_activity_date: today,
-          streak_days: 0
-        };
-        
-        const { data: createdStats, error: createError } = await supabase
-          .from('user_stats')
-          .insert(newStats)
-          .select()
-          .single();
-
-        if (!createError) {
-          setUserStats(createdStats);
-        }
-      } else if (data) {
-        // Check if we need to reset daily count
-        if (data.last_activity_date !== today) {
-          const updatedStats = {
-            ...data,
-            leads_classified_today: 0,
-            last_activity_date: today,
-            streak_days: isConsecutiveDay(data.last_activity_date) ? data.streak_days + 1 : 1
-          };
-          
-          await supabase
-            .from('user_stats')
-            .update(updatedStats)
-            .eq('id', data.id);
-            
-          setUserStats(updatedStats);
-        } else {
-          setUserStats(data);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-    }
-  };
-
-  const isConsecutiveDay = (lastDate: string) => {
-    const last = new Date(lastDate);
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - last.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays === 1;
-  };
-
-  const updateUserStats = async (classified: boolean = true) => {
-    if (!user || !userStats) return;
-
-    const updatedStats = {
-      ...userStats,
-      total_points: userStats.total_points + (classified ? 10 : 0),
-      leads_classified_today: userStats.leads_classified_today + (classified ? 1 : 0)
-    };
-
-    try {
-      await supabase
-        .from('user_stats')
-        .update(updatedStats)
-        .eq('id', userStats.id);
-
-      setUserStats(updatedStats);
-    } catch (error) {
-      console.error('Error updating user stats:', error);
-    }
-  };
-
   const updateLeadStatus = async (leadId: string, newStatus: string) => {
     try {
       const { error } = await supabase
@@ -191,25 +96,14 @@ const LeadsPage = () => {
         lead.id === leadId ? { ...lead, status: newStatus } : lead
       ));
 
-      // Gamification: increment stats and show reward
+      // Show success message
       if (newStatus !== 'unclassified') {
-        await updateUserStats(true);
-        
         const rewards = ['🎉', '🚀', '⭐', '🏆', '💪'];
         const randomReward = rewards[Math.floor(Math.random() * rewards.length)];
         
-        toast.success(`${randomReward} Lead classified! +10 points`, {
+        toast.success(`${randomReward} Lead classified!`, {
           duration: 2000,
         });
-
-        // Check for milestones
-        if (userStats && (userStats.total_points + 10) % 100 === 0) {
-          setTimeout(() => {
-            toast.success(`🎊 Milestone reached! ${userStats.total_points + 10} points!`, {
-              duration: 3000,
-            });
-          }, 500);
-        }
       }
     } catch (error) {
       console.error('Error updating lead status:', error);
@@ -264,10 +158,12 @@ const LeadsPage = () => {
 
   const handleSyncGmail = async () => {
     try {
+      console.log('Starting Gmail sync from LeadsPage...');
       await syncGmailLeads();
       await fetchLeads();
       toast.success('📧 Fresh leads synced!');
     } catch (error) {
+      console.error('Gmail sync error in LeadsPage:', error);
       // Error handling is done in the hook
     }
   };
@@ -286,7 +182,6 @@ const LeadsPage = () => {
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads();
-      fetchUserStats();
     } else if (!authLoading && !user) {
       setLeads([]);
       setLoading(false);
@@ -314,7 +209,7 @@ const LeadsPage = () => {
     cold: filteredLeads.filter(lead => lead.status === 'cold')
   }), [filteredLeads]);
 
-  // Gamification metrics
+  // Basic metrics
   const totalLeads = leads.filter(l => !l.is_archived).length;
   const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
@@ -340,7 +235,7 @@ const LeadsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto mt-32">
-        {/* Gamified Header */}
+        {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -354,30 +249,17 @@ const LeadsPage = () => {
               <p className="text-slate-600 mt-2 text-lg">Transform emails into opportunities 🚀</p>
             </div>
 
-            {/* Stats Dashboard */}
+            {/* Basic Stats */}
             <div className="mt-6 lg:mt-0 flex flex-wrap gap-4">
               <motion.div 
                 whileHover={{ scale: 1.05 }}
                 className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
               >
                 <div className="flex items-center space-x-2">
-                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <Mail className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="text-xs text-slate-600">Total Points</p>
-                    <p className="text-lg font-bold text-slate-900">{userStats?.total_points || 0}</p>
-                  </div>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
-              >
-                <div className="flex items-center space-x-2">
-                  <Flame className="h-5 w-5 text-orange-500" />
-                  <div>
-                    <p className="text-xs text-slate-600">Today's Streak</p>
-                    <p className="text-lg font-bold text-slate-900">{userStats?.leads_classified_today || 0}</p>
+                    <p className="text-xs text-slate-600">Active Leads</p>
+                    <p className="text-lg font-bold text-slate-900">{totalLeads}</p>
                   </div>
                 </div>
               </motion.div>
@@ -394,43 +276,7 @@ const LeadsPage = () => {
                   </div>
                 </div>
               </motion.div>
-
-              <motion.div 
-                whileHover={{ scale: 1.05 }}
-                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
-              >
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-5 w-5 text-green-500" />
-                  <div>
-                    <p className="text-xs text-slate-600">Active Leads</p>
-                    <p className="text-lg font-bold text-slate-900">{totalLeads}</p>
-                  </div>
-                </div>
-              </motion.div>
             </div>
-          </div>
-
-          {/* Progress Bar */}
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-slate-700">Classification Progress</h3>
-              <span className="text-sm text-slate-600">{classifiedLeads}/{totalLeads} leads classified</span>
-            </div>
-            <Progress 
-              value={completionPercentage} 
-              className="h-3 bg-slate-200"
-            />
-            <div className="flex justify-between text-xs text-slate-500 mt-2">
-              <span>Keep going! 💪</span>
-              <span>{completionPercentage >= 100 ? '🎉 All done!' : `${(100 - completionPercentage).toFixed(0)}% to go`}</span>
-            </div>
-            {userStats && userStats.streak_days > 0 && (
-              <div className="mt-3 text-center">
-                <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white">
-                  🔥 {userStats.streak_days} day streak!
-                </Badge>
-              </div>
-            )}
           </div>
 
           {/* Action Bar */}
