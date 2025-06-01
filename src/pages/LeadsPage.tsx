@@ -1,12 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useGmailSync } from '@/hooks/useGmailSync';
 import { toast } from 'sonner';
-import { RefreshCw, Mail } from 'lucide-react';
+import { 
+  RefreshCw, Mail, Search, Filter, Zap, Target, Trophy, Star,
+  Clock, User, ChevronRight, Flame, Snowflake, ThermometerSun,
+  CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
+  Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
+  MessageSquare, Send, ArrowLeft, Copy, Share2
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface Lead {
   id: string;
@@ -15,6 +35,16 @@ interface Lead {
   snippet: string;
   received_at: string;
   status: string;
+  is_archived?: boolean;
+}
+
+interface UserStats {
+  id?: string;
+  user_id: string;
+  total_points: number;
+  leads_classified_today: number;
+  last_activity_date: string;
+  streak_days: number;
 }
 
 const LeadsPage = () => {
@@ -22,20 +52,21 @@ const LeadsPage = () => {
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [notes, setNotes] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   const fetchLeads = async () => {
-    console.log('fetchLeads called, user:', user?.id);
-    
     if (!user) {
-      console.log('No user, setting loading to false');
       setLeads([]);
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Fetching leads for user:', user.id);
-      
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -48,14 +79,97 @@ const LeadsPage = () => {
         return;
       }
 
-      console.log('Leads fetched successfully:', data?.length || 0);
       setLeads(data || []);
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
     } finally {
-      console.log('Setting loading to false');
       setLoading(false);
+    }
+  };
+
+  const fetchUserStats = async () => {
+    if (!user) return;
+
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      let { data, error } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        // No stats found, create initial stats
+        const newStats: UserStats = {
+          user_id: user.id,
+          total_points: 0,
+          leads_classified_today: 0,
+          last_activity_date: today,
+          streak_days: 0
+        };
+        
+        const { data: createdStats, error: createError } = await supabase
+          .from('user_stats')
+          .insert(newStats)
+          .select()
+          .single();
+
+        if (!createError) {
+          setUserStats(createdStats);
+        }
+      } else if (data) {
+        // Check if we need to reset daily count
+        if (data.last_activity_date !== today) {
+          const updatedStats = {
+            ...data,
+            leads_classified_today: 0,
+            last_activity_date: today,
+            streak_days: isConsecutiveDay(data.last_activity_date) ? data.streak_days + 1 : 1
+          };
+          
+          await supabase
+            .from('user_stats')
+            .update(updatedStats)
+            .eq('id', data.id);
+            
+          setUserStats(updatedStats);
+        } else {
+          setUserStats(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+    }
+  };
+
+  const isConsecutiveDay = (lastDate: string) => {
+    const last = new Date(lastDate);
+    const today = new Date();
+    const diffTime = Math.abs(today.getTime() - last.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays === 1;
+  };
+
+  const updateUserStats = async (classified: boolean = true) => {
+    if (!user || !userStats) return;
+
+    const updatedStats = {
+      ...userStats,
+      total_points: userStats.total_points + (classified ? 10 : 0),
+      leads_classified_today: userStats.leads_classified_today + (classified ? 1 : 0)
+    };
+
+    try {
+      await supabase
+        .from('user_stats')
+        .update(updatedStats)
+        .eq('id', userStats.id);
+
+      setUserStats(updatedStats);
+    } catch (error) {
+      console.error('Error updating user stats:', error);
     }
   };
 
@@ -72,171 +186,499 @@ const LeadsPage = () => {
         return;
       }
 
-      // Update local state
+      // Update local state with animation
       setLeads(prev => prev.map(lead => 
         lead.id === leadId ? { ...lead, status: newStatus } : lead
       ));
 
-      toast.success('Lead status updated');
+      // Gamification: increment stats and show reward
+      if (newStatus !== 'unclassified') {
+        await updateUserStats(true);
+        
+        const rewards = ['🎉', '🚀', '⭐', '🏆', '💪'];
+        const randomReward = rewards[Math.floor(Math.random() * rewards.length)];
+        
+        toast.success(`${randomReward} Lead classified! +10 points`, {
+          duration: 2000,
+        });
+
+        // Check for milestones
+        if (userStats && (userStats.total_points + 10) % 100 === 0) {
+          setTimeout(() => {
+            toast.success(`🎊 Milestone reached! ${userStats.total_points + 10} points!`, {
+              duration: 3000,
+            });
+          }, 500);
+        }
+      }
     } catch (error) {
       console.error('Error updating lead status:', error);
       toast.error('Failed to update lead status');
     }
   };
 
+  const archiveLead = async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_archived: true })
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to archive lead');
+        return;
+      }
+
+      setLeads(prev => prev.map(lead => 
+        lead.id === leadId ? { ...lead, is_archived: true } : lead
+      ));
+      
+      toast.success('Lead archived');
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error('Error archiving lead:', error);
+      toast.error('Failed to archive lead');
+    }
+  };
+
+  const deleteLead = async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to delete lead');
+        return;
+      }
+
+      setLeads(prev => prev.filter(lead => lead.id !== leadId));
+      toast.success('Lead deleted');
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      toast.error('Failed to delete lead');
+    }
+  };
+
   const handleSyncGmail = async () => {
     try {
       await syncGmailLeads();
-      await fetchLeads(); // Refresh leads after sync
+      await fetchLeads();
+      toast.success('📧 Fresh leads synced!');
     } catch (error) {
       // Error handling is done in the hook
     }
   };
 
+  const copyEmail = (email: string) => {
+    navigator.clipboard.writeText(email);
+    toast.success('Email copied to clipboard');
+  };
+
+  const openInGmail = (email: string, subject: string) => {
+    const searchQuery = `from:${email} subject:"${subject}"`;
+    const gmailUrl = `https://mail.google.com/mail/u/0/#search/${encodeURIComponent(searchQuery)}`;
+    window.open(gmailUrl, '_blank');
+  };
+
   useEffect(() => {
-    console.log('LeadsPage useEffect triggered, authLoading:', authLoading, 'user:', user?.id);
-    
-    // Only fetch leads when auth is not loading and we have a user
     if (!authLoading && user) {
       fetchLeads();
+      fetchUserStats();
     } else if (!authLoading && !user) {
-      // Auth is done loading but no user - clear leads and stop loading
       setLeads([]);
       setLoading(false);
     }
-  }, [authLoading, user?.id]); // Depend on authLoading and user.id
+  }, [authLoading, user?.id]);
 
-  const categorizedLeads = {
-    hot: leads.filter(lead => lead.status === 'hot'),
-    warm: leads.filter(lead => lead.status === 'warm'),
-    cold: leads.filter(lead => lead.status === 'cold'),
-    unclassified: leads.filter(lead => lead.status === 'unclassified')
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  // Filter leads based on search query and archive status
+  const filteredLeads = useMemo(() => {
+    return leads.filter(lead => {
+      const matchesSearch = !searchQuery || 
+        lead.sender_email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        lead.snippet.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesArchiveFilter = showArchived ? lead.is_archived : !lead.is_archived;
+      
+      return matchesSearch && matchesArchiveFilter;
     });
-  };
+  }, [leads, searchQuery, showArchived]);
+
+  const categorizedLeads = useMemo(() => ({
+    unclassified: filteredLeads.filter(lead => lead.status === 'unclassified'),
+    hot: filteredLeads.filter(lead => lead.status === 'hot'),
+    warm: filteredLeads.filter(lead => lead.status === 'warm'),
+    cold: filteredLeads.filter(lead => lead.status === 'cold')
+  }), [filteredLeads]);
+
+  // Gamification metrics
+  const totalLeads = leads.filter(l => !l.is_archived).length;
+  const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
+  const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading leads...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+            <Mail className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-blue-600" />
+          </div>
+          <p className="text-slate-600 font-medium">Loading your leads...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-32 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8 mt-32">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto mt-32">
+        {/* Gamified Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Lead Classification</h1>
-              <p className="text-slate-600 mt-1">Organize and manage your email leads</p>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
+                Lead Mission Control
+              </h1>
+              <p className="text-slate-600 mt-2 text-lg">Transform emails into opportunities 🚀</p>
             </div>
-            <div className="mt-4 sm:mt-0 flex items-center space-x-3">
+
+            {/* Stats Dashboard */}
+            <div className="mt-6 lg:mt-0 flex flex-wrap gap-4">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <div>
+                    <p className="text-xs text-slate-600">Total Points</p>
+                    <p className="text-lg font-bold text-slate-900">{userStats?.total_points || 0}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  <Flame className="h-5 w-5 text-orange-500" />
+                  <div>
+                    <p className="text-xs text-slate-600">Today's Streak</p>
+                    <p className="text-lg font-bold text-slate-900">{userStats?.leads_classified_today || 0}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  <Target className="h-5 w-5 text-blue-500" />
+                  <div>
+                    <p className="text-xs text-slate-600">Completion</p>
+                    <p className="text-lg font-bold text-slate-900">{completionPercentage.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-xs text-slate-600">Active Leads</p>
+                    <p className="text-lg font-bold text-slate-900">{totalLeads}</p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20 shadow-sm mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-slate-700">Classification Progress</h3>
+              <span className="text-sm text-slate-600">{classifiedLeads}/{totalLeads} leads classified</span>
+            </div>
+            <Progress 
+              value={completionPercentage} 
+              className="h-3 bg-slate-200"
+            />
+            <div className="flex justify-between text-xs text-slate-500 mt-2">
+              <span>Keep going! 💪</span>
+              <span>{completionPercentage >= 100 ? '🎉 All done!' : `${(100 - completionPercentage).toFixed(0)}% to go`}</span>
+            </div>
+            {userStats && userStats.streak_days > 0 && (
+              <div className="mt-3 text-center">
+                <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400 to-orange-400 text-white">
+                  🔥 {userStats.streak_days} day streak!
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          {/* Action Bar */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-8">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Search leads by email, subject, or content..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white/70 backdrop-blur-sm border-white/20 rounded-xl"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant={showArchived ? 'default' : 'outline'}
+                onClick={() => setShowArchived(!showArchived)}
+                className="rounded-xl"
+              >
+                <Archive className="h-4 w-4 mr-2" />
+                {showArchived ? 'Show Active' : 'Show Archived'}
+              </Button>
+              
               <Button
                 onClick={handleSyncGmail}
                 disabled={syncLoading}
-                variant="outline"
-                className="flex items-center space-x-2"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
               >
-                <RefreshCw className={`h-4 w-4 ${syncLoading ? 'animate-spin' : ''}`} />
-                <span>Sync Gmail</span>
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+                Sync Gmail
               </Button>
-              <div className="text-sm text-slate-600">
-                Total leads: {leads.length}
-              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
+        {/* Kanban Board */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Unclassified Column */}
-          <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                <div className="w-3 h-3 bg-slate-400 rounded-full mr-2"></div>
-                Unclassified ({categorizedLeads.unclassified.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {categorizedLeads.unclassified.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onStatusChange={updateLeadStatus}
-                />
-              ))}
-            </div>
-          </div>
+          {[
+            { 
+              key: 'unclassified', 
+              title: 'Unclassified', 
+              icon: Circle, 
+              color: 'slate', 
+              bgGradient: 'from-slate-400 to-slate-500',
+              count: categorizedLeads.unclassified.length 
+            },
+            { 
+              key: 'hot', 
+              title: 'Hot Leads', 
+              icon: Flame, 
+              color: 'red', 
+              bgGradient: 'from-red-500 to-orange-500',
+              count: categorizedLeads.hot.length 
+            },
+            { 
+              key: 'warm', 
+              title: 'Warm Leads', 
+              icon: ThermometerSun, 
+              color: 'yellow', 
+              bgGradient: 'from-yellow-400 to-orange-400',
+              count: categorizedLeads.warm.length 
+            },
+            { 
+              key: 'cold', 
+              title: 'Cold Leads', 
+              icon: Snowflake, 
+              color: 'blue', 
+              bgGradient: 'from-blue-400 to-blue-500',
+              count: categorizedLeads.cold.length 
+            }
+          ].map((column, index) => (
+            <motion.div
+              key={column.key}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+              className="space-y-4"
+            >
+              {/* Column Header */}
+              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`p-2 rounded-xl bg-gradient-to-r ${column.bgGradient}`}>
+                      <column.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h2 className="font-semibold text-slate-700">{column.title}</h2>
+                      <p className="text-sm text-slate-500">{column.count} leads</p>
+                    </div>
+                  </div>
+                  <Badge 
+                    variant="secondary" 
+                    className={`${
+                      column.count > 0 ? 'bg-gradient-to-r ' + column.bgGradient + ' text-white' : ''
+                    } rounded-full`}
+                  >
+                    {column.count}
+                  </Badge>
+                </div>
+              </div>
 
-          {/* Hot Column */}
-          <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                Hot ({categorizedLeads.hot.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {categorizedLeads.hot.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onStatusChange={updateLeadStatus}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Warm Column */}
-          <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
-                Warm ({categorizedLeads.warm.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {categorizedLeads.warm.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onStatusChange={updateLeadStatus}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Cold Column */}
-          <div>
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-slate-700 flex items-center">
-                <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                Cold ({categorizedLeads.cold.length})
-              </h2>
-            </div>
-            <div className="space-y-3">
-              {categorizedLeads.cold.map((lead) => (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  onStatusChange={updateLeadStatus}
-                />
-              ))}
-            </div>
-          </div>
+              {/* Lead Cards */}
+              <div className="space-y-3 min-h-[200px]">
+                <AnimatePresence>
+                  {categorizedLeads[column.key as keyof typeof categorizedLeads].map((lead, leadIndex) => (
+                    <motion.div
+                      key={lead.id}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ delay: leadIndex * 0.05 }}
+                    >
+                      <LeadCard
+                        lead={lead}
+                        onStatusChange={updateLeadStatus}
+                        onSelect={(lead) => {
+                          setSelectedLead(lead);
+                          setShowDetailsModal(true);
+                        }}
+                        columnColor={column.color}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+                
+                {categorizedLeads[column.key as keyof typeof categorizedLeads].length === 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-center p-8 text-slate-400"
+                  >
+                    <column.icon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No {column.title.toLowerCase()} yet</p>
+                  </motion.div>
+                )}
+              </div>
+            </motion.div>
+          ))}
         </div>
+
+        {/* Lead Details Modal */}
+        <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center justify-between">
+                <span>Lead Details</span>
+                <Badge variant={
+                  selectedLead?.status === 'hot' ? 'destructive' :
+                  selectedLead?.status === 'warm' ? 'default' :
+                  selectedLead?.status === 'cold' ? 'secondary' :
+                  'outline'
+                }>
+                  {selectedLead?.status}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            
+            {selectedLead && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 mb-1">From</h3>
+                  <div className="flex items-center justify-between">
+                    <p className="font-medium">{selectedLead.sender_email}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyEmail(selectedLead.sender_email)}
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openInGmail(selectedLead.sender_email, selectedLead.subject)}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 mb-1">Subject</h3>
+                  <p className="font-medium">{selectedLead.subject || 'No subject'}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 mb-1">Preview</h3>
+                  <p className="text-slate-700 whitespace-pre-wrap">{selectedLead.snippet}</p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 mb-1">Received</h3>
+                  <p className="text-slate-700">
+                    {new Date(selectedLead.received_at).toLocaleString()}
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-medium text-slate-600 mb-1">Notes</h3>
+                  <Textarea
+                    placeholder="Add notes about this lead..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
+
+                <div className="flex justify-between pt-4 border-t">
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => archiveLead(selectedLead.id)}
+                      disabled={selectedLead.is_archived}
+                    >
+                      <Archive className="h-4 w-4 mr-2" />
+                      {selectedLead.is_archived ? 'Archived' : 'Archive'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this lead?')) {
+                          deleteLead(selectedLead.id);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
+                  </div>
+                  
+                  <Button
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    onClick={() => {
+                      window.location.href = `mailto:${selectedLead.sender_email}?subject=Re: ${selectedLead.subject}`;
+                    }}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Reply
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
@@ -245,59 +687,140 @@ const LeadsPage = () => {
 interface LeadCardProps {
   lead: Lead;
   onStatusChange: (leadId: string, newStatus: string) => void;
+  onSelect: (lead: Lead) => void;
+  columnColor: string;
 }
 
-const LeadCard = ({ lead, onStatusChange }: LeadCardProps) => {
+const LeadCard = ({ lead, onStatusChange, onSelect, columnColor }: LeadCardProps) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) return 'Just now';
+    if (diffInHours < 24) return `${Math.floor(diffInHours)}h ago`;
+    if (diffInHours < 48) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const getUrgencyIndicator = () => {
+    const date = new Date(lead.received_at);
+    const now = new Date();
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
+    
+    if (diffInHours < 2) return { icon: AlertTriangle, color: 'text-red-500', label: 'Urgent' };
+    if (diffInHours < 24) return { icon: Clock, color: 'text-yellow-500', label: 'Recent' };
+    return { icon: Calendar, color: 'text-slate-400', label: 'Older' };
+  };
+
+  const urgency = getUrgencyIndicator();
+
   return (
-    <Card className="cursor-pointer hover:shadow-md transition-shadow">
-      <CardHeader className="pb-2">
-        <div className="flex items-start justify-between">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-sm font-medium text-slate-900 truncate">
-              {lead.sender_email}
-            </CardTitle>
-            <p className="text-xs text-slate-500 mt-1">
-              {formatDate(lead.received_at)}
+    <motion.div
+      whileHover={{ y: -2, scale: 1.02 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      className="group"
+    >
+      <Card className={cn(
+        "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden",
+        lead.is_archived && "opacity-60"
+      )}>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center space-x-2 mb-2">
+                <div className="w-2 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                <CardTitle className="text-sm font-medium text-slate-900 truncate">
+                  {lead.sender_email}
+                </CardTitle>
+              </div>
+              <div className="flex items-center space-x-2">
+                <urgency.icon className={`h-3 w-3 ${urgency.color}`} />
+                <p className="text-xs text-slate-500">{formatDate(lead.received_at)}</p>
+                <Badge variant="outline" className="text-xs px-2 py-0">
+                  {urgency.label}
+                </Badge>
+                {lead.is_archived && (
+                  <Badge variant="secondary" className="text-xs px-2 py-0">
+                    Archived
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: isHovered ? 1 : 0 }}
+              className="flex space-x-1"
+            >
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 w-6 p-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelect(lead);
+                }}
+              >
+                <Eye className="h-3 w-3" />
+              </Button>
+            </motion.div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="pt-0 space-y-3">
+          <div onClick={() => onSelect(lead)} className="cursor-pointer">
+            <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1">
+              {lead.subject || 'No subject'}
+            </h3>
+            <p className="text-xs text-slate-600 line-clamp-3">
+              {lead.snippet}
             </p>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-slate-800 line-clamp-2">
-            {lead.subject || 'No subject'}
-          </h3>
-          <p className="text-xs text-slate-600 line-clamp-3">
-            {lead.snippet}
-          </p>
+
           <div className="pt-2">
             <Select
               value={lead.status}
               onValueChange={(value) => onStatusChange(lead.id, value)}
+              disabled={lead.is_archived}
             >
-              <SelectTrigger className="w-full h-8 text-xs">
+              <SelectTrigger className="w-full h-8 text-xs bg-white/50 border-white/20 rounded-lg">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unclassified">Unclassified</SelectItem>
-                <SelectItem value="hot">Hot</SelectItem>
-                <SelectItem value="warm">Warm</SelectItem>
-                <SelectItem value="cold">Cold</SelectItem>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="unclassified" className="rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Circle className="h-3 w-3 text-slate-400" />
+                    <span>Unclassified</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="hot" className="rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Flame className="h-3 w-3 text-red-500" />
+                    <span>Hot Lead</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="warm" className="rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <ThermometerSun className="h-3 w-3 text-yellow-500" />
+                    <span>Warm Lead</span>
+                  </div>
+                </SelectItem>
+                <SelectItem value="cold" className="rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Snowflake className="h-3 w-3 text-blue-500" />
+                    <span>Cold Lead</span>
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 };
 
