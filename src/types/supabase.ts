@@ -130,6 +130,7 @@ export interface Database {
           updated_at: string | null
           username: string | null
           website: string | null
+          google_access_token: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -138,6 +139,7 @@ export interface Database {
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          google_access_token?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -146,6 +148,7 @@ export interface Database {
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          google_access_token?: string | null
         }
         Relationships: [
           {

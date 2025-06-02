@@ -150,11 +150,14 @@ export function useAuthSession(): AuthSession {
               navigate('/leads');
             }
             
+            // Always update profile with token to ensure Gmail sync works
             updateProfileWithToken(currentSession);
           }
           
           if (event === 'TOKEN_REFRESHED' && currentSession) {
             console.log('Token refreshed, updating profile...');
+            // Make sure to update the profile with the refreshed token
+            // This is critical for Gmail sync to work properly
             updateProfileWithToken(currentSession);
             // Do not navigate on token refresh
           }
