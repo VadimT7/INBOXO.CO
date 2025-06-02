@@ -133,14 +133,30 @@ export function useAuthSession(): AuthSession {
           setUser(currentSession?.user ?? null);
           
           if (event === 'SIGNED_IN' && currentSession) {
-            toast.success("You're in. Let's organize your leads.");
+            // Only show welcome toast once per session
+            const welcomeShown = sessionStorage.getItem('welcomeToastShown');
+            
+            // Check if this is a fresh login or a page refresh
+            const isInitialSignIn = !localStorage.getItem('userHasLoggedIn');
+            
+            if (!welcomeShown) {
+              toast.success("You're in. Let's organize your leads.");
+              sessionStorage.setItem('welcomeToastShown', 'true');
+            }
+            
+            // Only navigate to leads page on initial sign-in, not on page refreshes
+            if (isInitialSignIn) {
+              localStorage.setItem('userHasLoggedIn', 'true');
+              navigate('/leads');
+            }
+            
             updateProfileWithToken(currentSession);
-            navigate('/leads');
           }
           
           if (event === 'TOKEN_REFRESHED' && currentSession) {
             console.log('Token refreshed, updating profile...');
             updateProfileWithToken(currentSession);
+            // Do not navigate on token refresh
           }
         }
         
