@@ -91,7 +91,7 @@ const SettingsPage = () => {
 
   const loadSettings = async () => {
     try {
-      // Load user settings from Supabase or create default settings
+      // Default settings template
       const defaultSettings: UserSettings = {
         id: user?.id || '',
         email: user?.email || '',
@@ -136,7 +136,28 @@ const SettingsPage = () => {
         },
       };
 
-      setSettings(defaultSettings);
+      // Try to load existing settings from Supabase
+      const { data, error } = await supabase
+        .from('user_settings' as any)
+        .select('settings')
+        .eq('user_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is the error code for no rows returned
+        console.error('Error fetching settings:', error);
+        toast.error('Failed to load settings');
+        setSettings(defaultSettings);
+      } else if (data) {
+        // If settings exist, merge them with default settings to ensure all fields exist
+        const userSettings = (data as any).settings;
+        setSettings({
+          ...defaultSettings,
+          ...userSettings,
+        });
+      } else {
+        // If no settings exist, use default settings
+        setSettings(defaultSettings);
+      }
     } catch (error) {
       console.error('Error loading settings:', error);
       toast.error('Failed to load settings');
@@ -150,8 +171,20 @@ const SettingsPage = () => {
 
     setSaving(true);
     try {
-      // In a real app, you would save to Supabase
-      // await supabase.from('user_settings').upsert(settings);
+      // Save settings to Supabase
+      const { error } = await supabase
+        .from('user_settings' as any)
+        .upsert({
+          user_id: user?.id,
+          settings: settings as any,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (error) {
+        throw error;
+      }
       
       toast.success('Settings saved successfully');
     } catch (error) {

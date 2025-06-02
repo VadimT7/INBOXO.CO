@@ -18,11 +18,12 @@ export function useGmailSync() {
         return;
       }
 
+      console.log('Session: ', session);
       console.log('Session found, invoking fetch-gmail-leads function...');
-      
+      console.log('Access Token: ', session.session.access_token);
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
         headers: {
-          Authorization: `Bearer ${session.session.access_token}`,
+          Authorization: 'Bearer ' + session.session.access_token,
         },
       });
 

@@ -10,6 +10,30 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+      user_settings: {
+        Row: {
+          id: string
+          user_id: string
+          settings: Json
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          settings: Json
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          settings?: Json
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           created_at: string
