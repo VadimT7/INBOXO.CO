@@ -1,4 +1,5 @@
 
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
@@ -17,12 +18,174 @@ interface GmailMessage {
       name: string;
       value: string;
     }>;
+    parts?: Array<{
+      mimeType: string;
+      body: {
+        data?: string;
+      };
+    }>;
+    body?: {
+      data?: string;
+    };
   };
 }
 
 interface GmailListResponse {
   messages?: Array<{ id: string; threadId: string }>;
   nextPageToken?: string;
+}
+
+interface AIClassificationResult {
+  isLead: boolean;
+  classification: 'hot' | 'warm' | 'cold' | 'unclassified';
+  confidence: number;
+  reasoning: string;
+}
+
+// Function to extract email body text
+function extractEmailBody(messageData: GmailMessage): string {
+  let bodyText = '';
+  
+  // Try to get the body from the main payload
+  if (messageData.payload.body?.data) {
+    try {
+      bodyText = atob(messageData.payload.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+    } catch (e) {
+      console.error('Error decoding body data:', e);
+    }
+  }
+  
+  // If no body in main payload, check parts
+  if (!bodyText && messageData.payload.parts) {
+    for (const part of messageData.payload.parts) {
+      if (part.mimeType === 'text/plain' && part.body?.data) {
+        try {
+          bodyText = atob(part.body.data.replace(/-/g, '+').replace(/_/g, '/'));
+          break;
+        } catch (e) {
+          console.error('Error decoding part data:', e);
+        }
+      }
+    }
+  }
+  
+  // Fallback to snippet if no body found
+  if (!bodyText) {
+    bodyText = messageData.snippet || '';
+  }
+  
+  // Clean up the text (remove HTML tags, extra whitespace)
+  return bodyText.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}
+
+// Function to classify email using OpenAI
+async function classifyEmailWithAI(subject: string, body: string, senderEmail: string): Promise<AIClassificationResult> {
+  const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+  
+  if (!openAIApiKey) {
+    console.error('OpenAI API key not found');
+    return {
+      isLead: false,
+      classification: 'unclassified',
+      confidence: 0,
+      reasoning: 'OpenAI API key not configured'
+    };
+  }
+
+  const prompt = `Analyze this email to determine if it's a potential business lead and classify it. 
+
+Email Details:
+- From: ${senderEmail}
+- Subject: ${subject}
+- Body: ${body.substring(0, 1000)} ${body.length > 1000 ? '...' : ''}
+
+Please analyze this email and respond with a JSON object containing:
+1. "isLead" (boolean): true if this appears to be a genuine business inquiry/lead
+2. "classification" (string): one of "hot", "warm", "cold", or "unclassified"
+   - "hot": Urgent requests, ready to buy, specific project needs, mentions budget/timeline
+   - "warm": General inquiries, interested prospects, requests for information
+   - "cold": Generic messages, potential spam, unclear intent
+   - "unclassified": Cannot determine or clearly not a lead
+3. "confidence" (number): 0-100 confidence score
+4. "reasoning" (string): Brief explanation of the classification
+
+Consider these factors:
+- Urgency indicators (urgent, ASAP, deadline)
+- Purchase intent (buy, purchase, quote, proposal)
+- Specific project mentions
+- Budget/timeline references
+- Professional language vs spam-like content
+- Sender email legitimacy
+
+Exclude newsletters, automated emails, notifications, and obvious spam.
+
+Respond only with valid JSON.`;
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openAIApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert at analyzing business emails to identify and classify potential leads. Always respond with valid JSON only.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 500
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status, await response.text());
+      return {
+        isLead: false,
+        classification: 'unclassified',
+        confidence: 0,
+        reasoning: 'OpenAI API error'
+      };
+    }
+
+    const data = await response.json();
+    const aiResponse = data.choices[0].message.content;
+    
+    console.log('AI Classification Response:', aiResponse);
+    
+    try {
+      const result = JSON.parse(aiResponse);
+      return {
+        isLead: Boolean(result.isLead),
+        classification: result.classification || 'unclassified',
+        confidence: Number(result.confidence) || 0,
+        reasoning: result.reasoning || 'No reasoning provided'
+      };
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError, 'Response:', aiResponse);
+      return {
+        isLead: false,
+        classification: 'unclassified',
+        confidence: 0,
+        reasoning: 'Failed to parse AI response'
+      };
+    }
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error);
+    return {
+      isLead: false,
+      classification: 'unclassified',
+      confidence: 0,
+      reasoning: 'OpenAI API call failed'
+    };
+  }
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -143,12 +306,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Token validated, fetching Gmail messages...');
 
-    // Use a much simpler and broader search query - look for recent emails that aren't from automated senders
+    // Use a broad search query to get recent emails
     const query = `newer_than:7d -from:noreply -from:no-reply -from:donotreply`;
     console.log('Gmail query:', query);
 
     // Fetch emails from Gmail API
-    const gmailUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=50`;
+    const gmailUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=30`;
     console.log('Fetching from Gmail API:', gmailUrl);
 
     const listResponse = await fetch(gmailUrl, {
@@ -191,18 +354,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Fetch details for each message and filter for leads
+    // Process messages with AI classification
     const leads = [];
-    const messageLimit = Math.min(listData.messages.length, 20); // Process max 20 messages
+    const messageLimit = Math.min(listData.messages.length, 15); // Process max 15 messages
     
-    console.log(`Processing ${messageLimit} messages...`);
-    
-    // Define keywords to identify potential leads
-    const leadKeywords = [
-      'quote', 'inquiry', 'contact', 'project', 'business', 'collaboration', 
-      'proposal', 'request', 'service', 'buy', 'purchase', 'urgent', 'need',
-      'interested', 'looking for', 'want to', 'hire', 'work with', 'partnership'
-    ];
+    console.log(`Processing ${messageLimit} messages with AI classification...`);
     
     for (let i = 0; i < messageLimit; i++) {
       const message = listData.messages[i];
@@ -210,7 +366,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log(`Processing message ${i + 1}/${messageLimit}: ${message.id}`);
         
         const messageResponse = await fetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}`,
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`,
           {
             headers: {
               'Authorization': `Bearer ${profile.google_access_token}`,
@@ -252,27 +408,31 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         const subject = subjectHeader?.value || '';
-        const snippet = messageData.snippet || '';
+        const body = extractEmailBody(messageData);
         
-        // Check if this looks like a lead based on keywords
-        const textToCheck = `${subject} ${snippet}`.toLowerCase();
-        const isLead = leadKeywords.some(keyword => textToCheck.includes(keyword.toLowerCase()));
+        console.log(`Analyzing email with AI: ${senderEmail} - ${subject}`);
         
-        if (!isLead) {
-          console.log(`Skipping non-lead email: ${senderEmail} - ${subject}`);
+        // Use AI to classify the email
+        const aiResult = await classifyEmailWithAI(subject, body, senderEmail);
+        
+        console.log(`AI Classification: isLead=${aiResult.isLead}, classification=${aiResult.classification}, confidence=${aiResult.confidence}`);
+        
+        if (!aiResult.isLead) {
+          console.log(`AI classified as non-lead: ${senderEmail} - ${subject}`);
           continue;
         }
 
-        console.log(`✓ Lead detected: ${senderEmail} - ${subject}`);
+        console.log(`✓ AI detected lead: ${senderEmail} - ${subject} (${aiResult.classification}, ${aiResult.confidence}% confidence)`);
 
         const lead = {
           user_id: user.id,
           gmail_message_id: messageData.id,
           sender_email: senderEmail,
           subject: subject,
-          snippet: snippet,
+          snippet: messageData.snippet || body.substring(0, 200),
           received_at: new Date(parseInt(messageData.internalDate)).toISOString(),
-          status: 'unclassified'
+          status: aiResult.classification,
+          notes: `AI Classification: ${aiResult.reasoning} (Confidence: ${aiResult.confidence}%)`
         };
 
         leads.push(lead);
@@ -282,7 +442,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    console.log(`Total leads to insert: ${leads.length}`);
+    console.log(`Total AI-classified leads to insert: ${leads.length}`);
 
     // Insert leads into Supabase (using upsert to handle duplicates)
     if (leads.length > 0) {
@@ -302,11 +462,11 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      console.log('✓ Successfully inserted leads:', insertData?.length || 0);
+      console.log('✓ Successfully inserted AI-classified leads:', insertData?.length || 0);
     }
 
     const result = { 
-      message: 'Gmail leads processed successfully', 
+      message: 'Gmail leads processed successfully with AI classification', 
       count: leads.length,
       processed: messageLimit,
       total_found: listData.messages.length
