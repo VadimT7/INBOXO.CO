@@ -33,11 +33,11 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== Gmail Leads Fetch Function Started ===');
     
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for database operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase configuration');
       return new Response(
         JSON.stringify({ error: 'Missing Supabase configuration' }),
@@ -45,7 +45,12 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create client for auth verification (using anon key)
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey!);
+    
+    // Create client for database operations (using service role)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get user from auth header
     const authHeader = req.headers.get('Authorization');
@@ -58,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Verifying user token...');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
 
