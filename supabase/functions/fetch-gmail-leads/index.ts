@@ -143,16 +143,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Token validated, fetching Gmail messages...');
 
-    // Define keywords to filter emails - broader search for better results
-    const keywords = ['inquiry', 'contact', 'quote', 'project', 'business', 'collaboration', 'proposal', 'request', 'service'];
-    const keywordQuery = keywords.map(keyword => `subject:${keyword} OR body:${keyword}`).join(' OR ');
-    
-    // Gmail API query: unread emails with keywords
-    const query = `is:unread (${keywordQuery}) newer_than:7d`;
+    // Use a much simpler and broader search query - look for recent emails that aren't from automated senders
+    const query = `newer_than:7d -from:noreply -from:no-reply -from:donotreply`;
     console.log('Gmail query:', query);
 
     // Fetch emails from Gmail API
-    const gmailUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`;
+    const gmailUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=50`;
     console.log('Fetching from Gmail API:', gmailUrl);
 
     const listResponse = await fetch(gmailUrl, {
@@ -190,16 +186,23 @@ const handler = async (req: Request): Promise<Response> => {
     if (!listData.messages || listData.messages.length === 0) {
       console.log('No messages found');
       return new Response(
-        JSON.stringify({ message: 'No new lead emails found', count: 0 }),
+        JSON.stringify({ message: 'No messages found in Gmail', count: 0 }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Fetch details for each message
+    // Fetch details for each message and filter for leads
     const leads = [];
-    const messageLimit = Math.min(listData.messages.length, 10); // Process max 10 messages
+    const messageLimit = Math.min(listData.messages.length, 20); // Process max 20 messages
     
     console.log(`Processing ${messageLimit} messages...`);
+    
+    // Define keywords to identify potential leads
+    const leadKeywords = [
+      'quote', 'inquiry', 'contact', 'project', 'business', 'collaboration', 
+      'proposal', 'request', 'service', 'buy', 'purchase', 'urgent', 'need',
+      'interested', 'looking for', 'want to', 'hire', 'work with', 'partnership'
+    ];
     
     for (let i = 0; i < messageLimit; i++) {
       const message = listData.messages[i];
@@ -237,24 +240,42 @@ const handler = async (req: Request): Promise<Response> => {
         const emailMatch = fromHeader.value.match(/<([^>]+)>/) || [null, fromHeader.value];
         const senderEmail = (emailMatch[1] || fromHeader.value).trim();
 
-        // Skip if email doesn't look valid
-        if (!senderEmail.includes('@') || senderEmail.includes('noreply') || senderEmail.includes('no-reply')) {
-          console.log(`Skipping email: ${senderEmail} (automated or invalid)`);
+        // Skip if email doesn't look valid or is from automated senders
+        if (!senderEmail.includes('@') || 
+            senderEmail.toLowerCase().includes('noreply') || 
+            senderEmail.toLowerCase().includes('no-reply') ||
+            senderEmail.toLowerCase().includes('donotreply') ||
+            senderEmail.toLowerCase().includes('notification') ||
+            senderEmail.toLowerCase().includes('automated')) {
+          console.log(`Skipping automated email: ${senderEmail}`);
           continue;
         }
+
+        const subject = subjectHeader?.value || '';
+        const snippet = messageData.snippet || '';
+        
+        // Check if this looks like a lead based on keywords
+        const textToCheck = `${subject} ${snippet}`.toLowerCase();
+        const isLead = leadKeywords.some(keyword => textToCheck.includes(keyword.toLowerCase()));
+        
+        if (!isLead) {
+          console.log(`Skipping non-lead email: ${senderEmail} - ${subject}`);
+          continue;
+        }
+
+        console.log(`✓ Lead detected: ${senderEmail} - ${subject}`);
 
         const lead = {
           user_id: user.id,
           gmail_message_id: messageData.id,
           sender_email: senderEmail,
-          subject: subjectHeader?.value || 'No subject',
-          snippet: messageData.snippet || '',
+          subject: subject,
+          snippet: snippet,
           received_at: new Date(parseInt(messageData.internalDate)).toISOString(),
           status: 'unclassified'
         };
 
         leads.push(lead);
-        console.log(`✓ Lead processed: ${senderEmail} - ${subjectHeader?.value}`);
 
       } catch (error) {
         console.error(`Error processing message ${message.id}:`, error);
