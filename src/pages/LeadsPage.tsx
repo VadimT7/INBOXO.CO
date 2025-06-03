@@ -473,14 +473,20 @@ const LeadsPage = () => {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => copyEmail(selectedLead.sender_email)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyEmail(selectedLead.sender_email);
+                        }}
                       >
                         <Copy className="h-3 w-3" />
                       </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => openInGmail(selectedLead.sender_email, selectedLead.subject)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openInGmail(selectedLead.sender_email, selectedLead.subject);
+                        }}
                       >
                         <ExternalLink className="h-3 w-3" />
                       </Button>
@@ -596,9 +602,7 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
   // Handle content click for modal opening
   const handleContentClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (typeof onSelect === 'function') {
-      onSelect(lead);
-    }
+    onSelect(lead);
   };
 
   // Handle select change
@@ -781,7 +785,7 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
             onStatusChange(leadId, newStatus);
           }
         }}
-        onSelect={handleCardClick}
+        onSelect={() => onSelect(lead)}
         columnColor={columnColor}
         isDragging={isDragging}
         isBeingDragged={true}
