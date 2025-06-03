@@ -84,14 +84,23 @@ const LeadsPage = () => {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
     
+    // If not dropped over a valid droppable area or the over.id is not a valid status
     if (!over) {
-      setActiveId(null);
+      // Just reset the active ID and return - lead stays in original position
       return;
     }
 
     const leadId = active.id as string;
     const newStatus = over.id as string;
+    
+    // Validate that the over.id is a valid status category
+    const validStatuses = ['unclassified', 'hot', 'warm', 'cold'];
+    if (!validStatuses.includes(newStatus)) {
+      // Not a valid status category, ignore the drop
+      return;
+    }
     
     // Find the lead being dragged
     const lead = leads.find(l => l.id === leadId);
@@ -111,8 +120,6 @@ const LeadsPage = () => {
         duration: 2000,
       });
     }
-    
-    setActiveId(null);
   };
 
   const fetchLeads = async () => {
