@@ -863,6 +863,11 @@ interface DroppableColumnProps {
 const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }: DroppableColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.key,
+    // Make the entire column a valid drop target
+    data: {
+      accepts: 'lead',
+      status: column.key
+    }
   });
 
   return (
@@ -870,10 +875,17 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="space-y-4"
+      className={cn(
+        "flex flex-col h-full rounded-xl transition-all", // Use flex column, full height
+        isOver && "bg-blue-100/50 ring-2 ring-blue-400" // Visual feedback for the entire column
+      )}
+      ref={setNodeRef} // The entire column is the drop target
     >
-      {/* Column Header */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm">
+      {/* Column Header (does not grow) */}
+      <div className={cn(
+        "bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm",
+        isOver && "ring-2 ring-blue-300 shadow-md" // Enhanced header highlight
+      )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className={`p-2 rounded-xl bg-gradient-to-r ${column.bgGradient}`}>
@@ -895,12 +907,11 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
         </div>
       </div>
 
-      {/* Lead Cards */}
+      {/* Lead Cards (grows to fill remaining space) */}
       <div 
-        ref={setNodeRef}
         className={cn(
-          "space-y-3 min-h-[200px] p-2 rounded-xl transition-colors",
-          isOver && "bg-blue-50/50 ring-2 ring-blue-200"
+          "flex-grow space-y-3 min-h-[200px] p-3 rounded-b-xl transition-all", // flex-grow, adjusted padding and rounding
+          isOver && "bg-blue-200/30" // Subtle background for card area when column isOver
         )}
       >
         <SortableContext items={leads.map(lead => lead.id)} strategy={verticalListSortingStrategy}>
