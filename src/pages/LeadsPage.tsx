@@ -22,7 +22,8 @@ import {
   Clock, User, ChevronRight, Flame, Snowflake, ThermometerSun,
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
-  MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical
+  MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ interface Lead {
   sender_email: string;
   subject: string;
   snippet: string;
+  full_content?: string;
   received_at: string;
   status: string;
   is_archived?: boolean;
@@ -64,6 +66,7 @@ const LeadsPage = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -285,6 +288,13 @@ const LeadsPage = () => {
     }
   }, [authLoading, user?.id]);
 
+  useEffect(() => {
+    // Reset showFullContent when modal opens/closes or lead changes
+    if (!showDetailsModal || !selectedLead) {
+      setShowFullContent(false);
+    }
+  }, [showDetailsModal, selectedLead?.id]);
+
   // Filter leads based on search query and archive status
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
@@ -310,6 +320,20 @@ const LeadsPage = () => {
   const totalLeads = leads.filter(l => !l.is_archived).length;
   const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
+
+  // Helper function to determine if content should be truncated
+  const shouldTruncateContent = (content: string) => {
+    return content && content.length > 300;
+  };
+
+  // Helper function to get display content
+  const getDisplayContent = (lead: Lead) => {
+    const content = lead.full_content || lead.snippet || '';
+    if (!showFullContent && shouldTruncateContent(content)) {
+      return content.substring(0, 300) + '...';
+    }
+    return content;
+  };
 
   if (authLoading || loading) {
     return (
@@ -534,8 +558,34 @@ const LeadsPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-slate-600 mb-1">Preview</h3>
-                  <p className="text-slate-700 whitespace-pre-wrap">{selectedLead.snippet}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium text-slate-600">Preview</h3>
+                    {shouldTruncateContent(selectedLead.full_content || selectedLead.snippet || '') && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowFullContent(!showFullContent)}
+                        className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+                      >
+                        {showFullContent ? (
+                          <>
+                            <ChevronUp className="h-3 w-3 mr-1" />
+                            See Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3 mr-1" />
+                            See More
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                    <p className="text-slate-700 whitespace-pre-wrap">
+                      {getDisplayContent(selectedLead)}
+                    </p>
+                  </div>
                 </div>
 
                 <div>
