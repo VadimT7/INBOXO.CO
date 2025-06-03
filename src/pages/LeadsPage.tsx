@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,10 +22,27 @@ import {
   Clock, User, ChevronRight, Flame, Snowflake, ThermometerSun,
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
-  MessageSquare, Send, ArrowLeft, Copy, Share2
+  MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  useDroppable,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Lead {
   id: string;
@@ -48,6 +64,53 @@ const LeadsPage = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+
+  // Drag and drop state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      setActiveId(null);
+      return;
+    }
+
+    const leadId = active.id as string;
+    const newStatus = over.id as string;
+    
+    // Find the lead being dragged
+    const lead = leads.find(l => l.id === leadId);
+    
+    if (lead && lead.status !== newStatus) {
+      updateLeadStatus(leadId, newStatus);
+      
+      // Show success message with animation
+      const statusEmojis = {
+        hot: '🔥',
+        warm: '🌤️', 
+        cold: '❄️',
+        unclassified: '📋'
+      };
+      const emoji = statusEmojis[newStatus as keyof typeof statusEmojis] || '✅';
+      toast.success(`${emoji} Lead moved to ${newStatus}!`, {
+        duration: 2000,
+      });
+    }
+    
+    setActiveId(null);
+  };
 
   const fetchLeads = async () => {
     if (!user) {
@@ -314,109 +377,74 @@ const LeadsPage = () => {
         </motion.div>
 
         {/* Kanban Board */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {[
-            { 
-              key: 'unclassified', 
-              title: 'Unclassified', 
-              icon: Circle, 
-              color: 'slate', 
-              bgGradient: 'from-slate-400 to-slate-500',
-              count: categorizedLeads.unclassified.length 
-            },
-            { 
-              key: 'hot', 
-              title: 'Hot Leads', 
-              icon: Flame, 
-              color: 'red', 
-              bgGradient: 'from-red-500 to-orange-500',
-              count: categorizedLeads.hot.length 
-            },
-            { 
-              key: 'warm', 
-              title: 'Warm Leads', 
-              icon: ThermometerSun, 
-              color: 'yellow', 
-              bgGradient: 'from-yellow-400 to-orange-400',
-              count: categorizedLeads.warm.length 
-            },
-            { 
-              key: 'cold', 
-              title: 'Cold Leads', 
-              icon: Snowflake, 
-              color: 'blue', 
-              bgGradient: 'from-blue-400 to-blue-500',
-              count: categorizedLeads.cold.length 
-            }
-          ].map((column, index) => (
-            <motion.div
-              key={column.key}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="space-y-4"
-            >
-              {/* Column Header */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-xl bg-gradient-to-r ${column.bgGradient}`}>
-                      <column.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="font-semibold text-slate-700">{column.title}</h2>
-                      <p className="text-sm text-slate-500">{column.count} leads</p>
-                    </div>
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`${
-                      column.count > 0 ? 'bg-gradient-to-r ' + column.bgGradient + ' text-white' : ''
-                    } rounded-full`}
-                  >
-                    {column.count}
-                  </Badge>
-                </div>
-              </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {[
+              { 
+                key: 'unclassified', 
+                title: 'Unclassified', 
+                icon: Circle, 
+                color: 'slate', 
+                bgGradient: 'from-slate-400 to-slate-500',
+                count: categorizedLeads.unclassified.length 
+              },
+              { 
+                key: 'hot', 
+                title: 'Hot Leads', 
+                icon: Flame, 
+                color: 'red', 
+                bgGradient: 'from-red-500 to-orange-500',
+                count: categorizedLeads.hot.length 
+              },
+              { 
+                key: 'warm', 
+                title: 'Warm Leads', 
+                icon: ThermometerSun, 
+                color: 'yellow', 
+                bgGradient: 'from-yellow-400 to-orange-400',
+                count: categorizedLeads.warm.length 
+              },
+              { 
+                key: 'cold', 
+                title: 'Cold Leads', 
+                icon: Snowflake, 
+                color: 'blue', 
+                bgGradient: 'from-blue-400 to-blue-500',
+                count: categorizedLeads.cold.length 
+              }
+            ].map((column, index) => (
+              <DroppableColumn
+                key={column.key}
+                column={column}
+                leads={categorizedLeads[column.key as keyof typeof categorizedLeads]}
+                index={index}
+                onStatusChange={updateLeadStatus}
+                onSelectLead={(lead) => {
+                  setSelectedLead(lead);
+                  setShowDetailsModal(true);
+                }}
+              />
+            ))}
+          </div>
 
-              {/* Lead Cards */}
-              <div className="space-y-3 min-h-[200px]">
-                <AnimatePresence>
-                  {categorizedLeads[column.key as keyof typeof categorizedLeads].map((lead, leadIndex) => (
-                    <motion.div
-                      key={lead.id}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ delay: leadIndex * 0.05 }}
-                    >
-                      <LeadCard
-                        lead={lead}
-                        onStatusChange={updateLeadStatus}
-                        onSelect={(lead) => {
-                          setSelectedLead(lead);
-                          setShowDetailsModal(true);
-                        }}
-                        columnColor={column.color}
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-                
-                {categorizedLeads[column.key as keyof typeof categorizedLeads].length === 0 && (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center p-8 text-slate-400"
-                  >
-                    <column.icon className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm">No {column.title.toLowerCase()} yet</p>
-                  </motion.div>
-                )}
+          <DragOverlay>
+            {activeId ? (
+              <div className="transform rotate-6 opacity-90">
+                <DraggableLeadCard
+                  lead={leads.find(l => l.id === activeId)!}
+                  onStatusChange={() => {}}
+                  onSelect={() => {}}
+                  columnColor="blue"
+                />
               </div>
-            </motion.div>
-          ))}
-        </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
         {/* Lead Details Modal */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
@@ -535,9 +563,11 @@ interface LeadCardProps {
   onStatusChange: (leadId: string, newStatus: string) => void;
   onSelect: (lead: Lead) => void;
   columnColor: string;
+  isDragging?: boolean;
+  isBeingDragged?: boolean;
 }
 
-const LeadCard = ({ lead, onStatusChange, onSelect, columnColor }: LeadCardProps) => {
+const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isBeingDragged }: LeadCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -563,22 +593,44 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor }: LeadCardProps
 
   const urgency = getUrgencyIndicator();
 
+  // Handle content click for modal opening
+  const handleContentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof onSelect === 'function') {
+      onSelect(lead);
+    }
+  };
+
+  // Handle select change
+  const handleSelectChange = (value: string) => {
+    onStatusChange(lead.id, value);
+  };
+
   return (
     <motion.div
-      whileHover={{ y: -2, scale: 1.02 }}
+      whileHover={!isBeingDragged ? { y: -2, scale: 1.02 } : {}}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className="group"
+      className={cn(
+        "group select-none", // Add select-none to prevent text selection
+        isDragging && "opacity-50",
+        isBeingDragged && "pointer-events-none" // Disable pointer events on child elements during drag
+      )}
+      style={{
+        userSelect: 'none', // Prevent text selection
+        WebkitUserSelect: 'none',
+      }}
     >
       <Card className={cn(
-        "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden",
-        lead.is_archived && "opacity-60"
+        "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden",
+        lead.is_archived && "opacity-60",
+        !isBeingDragged && "cursor-pointer"
       )}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-2">
-                <div className="w-2 h-2 bg-gradient-to-r from-blue-400 to-purple-400 rounded-full"></div>
+                <div className={`w-2 h-2 bg-gradient-to-r from-${columnColor}-400 to-${columnColor}-500 rounded-full`}></div>
                 <CardTitle className="text-sm font-medium text-slate-900 truncate">
                   {lead.sender_email}
                 </CardTitle>
@@ -597,28 +649,33 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor }: LeadCardProps
               </div>
             </div>
             
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: isHovered ? 1 : 0 }}
-              className="flex space-x-1"
-            >
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-6 w-6 p-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect(lead);
-                }}
+            {!isBeingDragged && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isHovered ? 1 : 0 }}
+                className="flex space-x-1"
               >
-                <Eye className="h-3 w-3" />
-              </Button>
-            </motion.div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 w-6 p-0 pointer-events-auto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect(lead);
+                  }}
+                >
+                  <Eye className="h-3 w-3" />
+                </Button>
+              </motion.div>
+            )}
           </div>
         </CardHeader>
 
         <CardContent className="pt-0 space-y-3">
-          <div onClick={() => onSelect(lead)} className="cursor-pointer">
+          <div 
+            onClick={!isBeingDragged ? handleContentClick : undefined} 
+            className={!isBeingDragged ? "cursor-pointer" : ""}
+          >
             <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1">
               {lead.subject || 'No subject'}
             </h3>
@@ -627,45 +684,202 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor }: LeadCardProps
             </p>
           </div>
 
-          <div className="pt-2">
-            <Select
-              value={lead.status}
-              onValueChange={(value) => onStatusChange(lead.id, value)}
-              disabled={lead.is_archived}
-            >
-              <SelectTrigger className="w-full h-8 text-xs bg-white/50 border-white/20 rounded-lg">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="unclassified" className="rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Circle className="h-3 w-3 text-slate-400" />
-                    <span>Unclassified</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="hot" className="rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Flame className="h-3 w-3 text-red-500" />
-                    <span>Hot Lead</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="warm" className="rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <ThermometerSun className="h-3 w-3 text-yellow-500" />
-                    <span>Warm Lead</span>
-                  </div>
-                </SelectItem>
-                <SelectItem value="cold" className="rounded-lg">
-                  <div className="flex items-center space-x-2">
-                    <Snowflake className="h-3 w-3 text-blue-500" />
-                    <span>Cold Lead</span>
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {!isBeingDragged && (
+            <div className="pt-2">
+              <Select
+                value={lead.status}
+                onValueChange={handleSelectChange}
+                disabled={lead.is_archived}
+              >
+                <SelectTrigger className="w-full h-8 text-xs bg-white/50 border-white/20 rounded-lg pointer-events-auto">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="unclassified" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Circle className="h-3 w-3 text-slate-400" />
+                      <span>Unclassified</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="hot" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Flame className="h-3 w-3 text-red-500" />
+                      <span>Hot Lead</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="warm" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <ThermometerSun className="h-3 w-3 text-yellow-500" />
+                      <span>Warm Lead</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="cold" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Snowflake className="h-3 w-3 text-blue-500" />
+                      <span>Cold Lead</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </CardContent>
       </Card>
+    </motion.div>
+  );
+};
+
+interface DraggableLeadCardProps {
+  lead: Lead;
+  onStatusChange: (leadId: string, newStatus: string) => void;
+  onSelect: (lead: Lead) => void;
+  columnColor: string;
+}
+
+const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: DraggableLeadCardProps) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: lead.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  // Handle click events to prevent drag conflicts
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Only call onSelect if we're not dragging and the click wasn't on an interactive element
+    const target = e.target as HTMLElement;
+    const isInteractive = target.closest('button, select, [role="combobox"]');
+    
+    if (!isDragging && !isInteractive) {
+      onSelect(lead);
+    }
+  };
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style} 
+      className={cn(
+        "cursor-grab active:cursor-grabbing",
+        isDragging && "opacity-50 rotate-3 scale-105"
+      )}
+      {...attributes}
+      {...listeners}
+    >
+      <LeadCard
+        lead={lead}
+        onStatusChange={(leadId, newStatus) => {
+          // Prevent status changes during drag
+          if (!isDragging) {
+            onStatusChange(leadId, newStatus);
+          }
+        }}
+        onSelect={handleCardClick}
+        columnColor={columnColor}
+        isDragging={isDragging}
+        isBeingDragged={true}
+      />
+    </div>
+  );
+};
+
+interface DroppableColumnProps {
+  column: {
+    key: string;
+    title: string;
+    icon: React.ElementType;
+    color: string;
+    bgGradient: string;
+    count: number;
+  };
+  leads: Lead[];
+  index: number;
+  onStatusChange: (leadId: string, newStatus: string) => void;
+  onSelectLead: (lead: Lead) => void;
+}
+
+const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }: DroppableColumnProps) => {
+  const { setNodeRef, isOver } = useDroppable({
+    id: column.key,
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.1 }}
+      className="space-y-4"
+    >
+      {/* Column Header */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`p-2 rounded-xl bg-gradient-to-r ${column.bgGradient}`}>
+              <column.icon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-slate-700">{column.title}</h2>
+              <p className="text-sm text-slate-500">{column.count} leads</p>
+            </div>
+          </div>
+          <Badge 
+            variant="secondary" 
+            className={`${
+              column.count > 0 ? 'bg-gradient-to-r ' + column.bgGradient + ' text-white' : ''
+            } rounded-full`}
+          >
+            {column.count}
+          </Badge>
+        </div>
+      </div>
+
+      {/* Lead Cards */}
+      <div 
+        ref={setNodeRef}
+        className={cn(
+          "space-y-3 min-h-[200px] p-2 rounded-xl transition-colors",
+          isOver && "bg-blue-50/50 ring-2 ring-blue-200"
+        )}
+      >
+        <SortableContext items={leads.map(lead => lead.id)} strategy={verticalListSortingStrategy}>
+          <AnimatePresence>
+            {leads.map((lead, leadIndex) => (
+              <motion.div
+                key={lead.id}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ delay: leadIndex * 0.05 }}
+              >
+                <DraggableLeadCard
+                  lead={lead}
+                  onStatusChange={onStatusChange}
+                  onSelect={onSelectLead}
+                  columnColor={column.color}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </SortableContext>
+        
+        {leads.length === 0 && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center p-8 text-slate-400"
+          >
+            <column.icon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No {column.title.toLowerCase()} yet</p>
+          </motion.div>
+        )}
+      </div>
     </motion.div>
   );
 };
