@@ -70,7 +70,10 @@ const LeadsPage = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        // Use delay to require holding for 250ms before dragging starts
+        delay: 100,
+        // Also keep a small distance threshold to avoid accidental drags
+        tolerance: 5,
       },
     })
   );
@@ -195,6 +198,30 @@ const LeadsPage = () => {
     } catch (error) {
       console.error('Error archiving lead:', error);
       toast.error('Failed to archive lead');
+    }
+  };
+
+  const unarchiveLead = async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ is_archived: false })
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to activate lead');
+        return;
+      }
+
+      setLeads(prev => prev.map(lead => 
+        lead.id === leadId ? { ...lead, is_archived: false } : lead
+      ));
+      
+      toast.success('Lead activated');
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error('Error activating lead:', error);
+      toast.error('Failed to activate lead');
     }
   };
 
@@ -523,14 +550,24 @@ const LeadsPage = () => {
 
                 <div className="flex justify-between pt-4 border-t">
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => archiveLead(selectedLead.id)}
-                      disabled={selectedLead.is_archived}
-                    >
-                      <Archive className="h-4 w-4 mr-2" />
-                      {selectedLead.is_archived ? 'Archived' : 'Archive'}
-                    </Button>
+                    {selectedLead.is_archived ? (
+                      <Button
+                        variant="outline"
+                        onClick={() => unarchiveLead(selectedLead.id)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Activate Lead
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => archiveLead(selectedLead.id)}
+                      >
+                        <Archive className="h-4 w-4 mr-2" />
+                        Archive
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="text-red-600 hover:text-red-700"
@@ -755,7 +792,7 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
     transition,
   };
 
-  // Handle click events to prevent drag conflicts
+  // Handle click events to show details on click, drag on hold
   const handleCardClick = (e: React.MouseEvent) => {
     // Only call onSelect if we're not dragging and the click wasn't on an interactive element
     const target = e.target as HTMLElement;
@@ -763,6 +800,7 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
     
     if (!isDragging && !isInteractive) {
       onSelect(lead);
+      e.stopPropagation();
     }
   };
 
@@ -771,9 +809,10 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "cursor-grab active:cursor-grabbing",
+        "cursor-pointer hover:cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 rotate-3 scale-105"
       )}
+      onClick={handleCardClick}
       {...attributes}
       {...listeners}
     >
@@ -785,7 +824,12 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
             onStatusChange(leadId, newStatus);
           }
         }}
-        onSelect={() => onSelect(lead)}
+        onSelect={(lead) => {
+          // Don't trigger onSelect from the card itself since we handle it in the wrapper
+          if (!isDragging) {
+            // This is now handled by the wrapper's onClick
+          }
+        }}
         columnColor={columnColor}
         isDragging={isDragging}
         isBeingDragged={true}
