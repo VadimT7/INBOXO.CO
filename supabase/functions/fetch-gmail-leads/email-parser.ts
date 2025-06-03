@@ -56,10 +56,34 @@ export function extractEmailHeaders(messageData: GmailMessage) {
 }
 
 export function isAutomatedEmail(senderEmail: string): boolean {
-  return !senderEmail.includes('@') || 
-         senderEmail.toLowerCase().includes('noreply') || 
-         senderEmail.toLowerCase().includes('no-reply') ||
-         senderEmail.toLowerCase().includes('donotreply') ||
-         senderEmail.toLowerCase().includes('notification') ||
-         senderEmail.toLowerCase().includes('automated');
+  // Only check for obviously invalid email formats or very specific system domains
+  // Don't filter out potential leads based on common keywords
+  
+  if (!senderEmail.includes('@')) {
+    return true; // Not a valid email address
+  }
+  
+  // Create a list of specific system domains that are definitely automated
+  const systemDomains = [
+    'mailchimp.com',
+    'sendgrid.net',
+    'amazonses.com',
+    'mailgun.org',
+    'postmaster.',
+    'mailer-daemon'
+  ];
+  
+  const lowerEmail = senderEmail.toLowerCase();
+  
+  // Check against system domains
+  for (const domain of systemDomains) {
+    if (lowerEmail.includes(domain)) {
+      return true;
+    }
+  }
+  
+  // Don't filter out based on common patterns anymore
+  // This allows emails with noreply@company.com or similar to be evaluated by our lead detection
+  
+  return false;
 }

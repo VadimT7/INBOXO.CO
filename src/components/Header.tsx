@@ -103,6 +103,7 @@ const Header = () => {
                             </Link>
                           </Button>
                         </li>
+                        {/* Revenue section temporarily removed
                         <li>
                           <Button
                             asChild
@@ -121,6 +122,7 @@ const Header = () => {
                             </Link>
                           </Button>
                         </li>
+                        */}
                         <li>
                           <Button
                             asChild

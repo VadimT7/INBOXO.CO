@@ -1,6 +1,40 @@
 
 import { AIClassificationResult } from './types.ts';
 
+// Function to detect leads based on keywords when AI fails
+function detectLeadByKeywords(subject: string, body: string): boolean {
+  const leadKeywords = [
+    'urgent', 'quote', 'buy now', 'purchase', 'interested', 'price', 'cost',
+    'inquiry', 'enquiry', 'proposal', 'service', 'budget', 'lead', 'request',
+    'opportunity', 'project', 'consultation', 'estimate', 'pricing'
+  ];
+  
+  const normalizedSubject = subject.toLowerCase();
+  const normalizedBody = body.toLowerCase();
+  
+  // Check for keywords in subject (weighted more heavily)
+  for (const keyword of leadKeywords) {
+    if (normalizedSubject.includes(keyword)) {
+      console.log(`Lead keyword detected in subject: ${keyword}`);
+      return true;
+    }
+  }
+  
+  // Check combinations of keywords in body
+  let keywordMatches = 0;
+  for (const keyword of leadKeywords) {
+    if (normalizedBody.includes(keyword)) {
+      keywordMatches++;
+      if (keywordMatches >= 2) {
+        console.log(`Multiple lead keywords detected in body: ${keywordMatches} matches`);
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
 export async function classifyEmailWithAI(subject: string, body: string, senderEmail: string): Promise<AIClassificationResult> {
   const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
   
@@ -22,7 +56,7 @@ Email Details:
 - Body: ${body.substring(0, 1000)} ${body.length > 1000 ? '...' : ''}
 
 Please analyze this email and respond with a JSON object containing:
-1. "isLead" (boolean): true if this appears to be a genuine business inquiry/lead
+1. "isLead" (boolean): true if this appears to be a business inquiry/lead
 2. "classification" (string): one of "hot", "warm", "cold", or "unclassified"
    - "hot": Urgent requests, ready to buy, specific project needs, mentions budget/timeline
    - "warm": General inquiries, interested prospects, requests for information
@@ -39,7 +73,9 @@ Consider these factors:
 - Professional language vs spam-like content
 - Sender email legitimacy
 
-Exclude newsletters, automated emails, notifications, and obvious spam.
+Exclude newsletters, automated emails, notifications.
+
+Some leads could seem as spam, but still include them in.
 
 Respond only with valid JSON.`;
 
@@ -84,6 +120,21 @@ Respond only with valid JSON.`;
     
     try {
       const result = JSON.parse(aiResponse);
+      
+      // If AI says it's not a lead, try our keyword fallback
+      if (!result.isLead) {
+        const keywordDetection = detectLeadByKeywords(subject, body);
+        if (keywordDetection) {
+          console.log(`AI classified as non-lead but keyword detection overrode: ${subject}`);
+          return {
+            isLead: true,
+            classification: 'warm',
+            confidence: 70,
+            reasoning: 'Keyword-based detection identified potential lead signals in the email'
+          };
+        }
+      }
+      
       return {
         isLead: Boolean(result.isLead),
         classification: result.classification || 'unclassified',
@@ -101,6 +152,19 @@ Respond only with valid JSON.`;
     }
   } catch (error) {
     console.error('Error calling OpenAI API:', error);
+    
+    // If OpenAI fails, fall back to keyword detection
+    const keywordDetection = detectLeadByKeywords(subject, body);
+    if (keywordDetection) {
+      console.log(`OpenAI API failed but keyword detection identified lead: ${subject}`);
+      return {
+        isLead: true,
+        classification: 'warm',
+        confidence: 60,
+        reasoning: 'Keyword-based detection identified potential lead signals when AI was unavailable'
+      };
+    }
+    
     return {
       isLead: false,
       classification: 'unclassified',

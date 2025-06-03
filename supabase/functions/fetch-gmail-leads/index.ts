@@ -39,8 +39,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Token validated, fetching Gmail messages...');
 
-    // Use a broad search query to get recent emails
-    const query = `newer_than:7d -from:noreply -from:no-reply -from:donotreply`;
+    // Use a broader search query to get recent emails - don't exclude no-reply emails as they might contain leads
+    const query = `newer_than:7d`;
     console.log('Gmail query:', query);
 
     // Fetch emails from Gmail API
@@ -70,11 +70,13 @@ const handler = async (req: Request): Promise<Response> => {
         
         // Extract headers and body
         const { senderEmail, subject } = extractEmailHeaders(messageData);
+        
+        console.log(`Processing email: ${subject} (from: ${senderEmail})`);
 
-        // Skip automated emails
+        // Skip only certain automated emails, but with more detailed logging
         if (isAutomatedEmail(senderEmail)) {
-          console.log(`Skipping automated email: ${senderEmail}`);
-          continue;
+          console.log(`Potential automated email detected: ${senderEmail} - ${subject}`);
+          // Don't skip immediately, let the AI or keyword detection decide
         }
 
         const body = extractEmailBody(messageData);
