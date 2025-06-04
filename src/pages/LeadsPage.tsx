@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useGmailSync } from '@/hooks/useGmailSync';
+import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
 import { toast } from 'sonner';
 import { 
   RefreshCw, Mail, Search, Filter, Zap, Target, Trophy, Star,
@@ -59,6 +60,7 @@ interface Lead {
 const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
+  const { markLeadAsResponded } = useResponseTimeAnalytics(user?.id);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -279,6 +281,19 @@ const LeadsPage = () => {
     window.open(gmailUrl, '_blank');
   };
 
+  const handleReplyToLead = async (lead: Lead) => {
+    // Mark as responded when user clicks reply
+    if (markLeadAsResponded) {
+      const success = await markLeadAsResponded(lead.id);
+      if (success) {
+        toast.success('Response time recorded!');
+      }
+    }
+    
+    // Open email client
+    window.location.href = `mailto:${lead.sender_email}?subject=Re: ${lead.subject}`;
+  };
+
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads();
@@ -294,6 +309,20 @@ const LeadsPage = () => {
       setShowFullContent(false);
     }
   }, [showDetailsModal, selectedLead?.id]);
+
+  // Helper function to determine if content should be truncated
+  const shouldTruncateContent = (content: string) => {
+    return content && content.length > 300;
+  };
+
+  // Helper function to get display content
+  const getDisplayContent = (lead: Lead) => {
+    const content = lead.full_content || lead.snippet || '';
+    if (!showFullContent && shouldTruncateContent(content)) {
+      return content.substring(0, 300) + '...';
+    }
+    return content;
+  };
 
   // Filter leads based on search query and archive status
   const filteredLeads = useMemo(() => {
@@ -320,20 +349,6 @@ const LeadsPage = () => {
   const totalLeads = leads.filter(l => !l.is_archived).length;
   const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
-
-  // Helper function to determine if content should be truncated
-  const shouldTruncateContent = (content: string) => {
-    return content && content.length > 300;
-  };
-
-  // Helper function to get display content
-  const getDisplayContent = (lead: Lead) => {
-    const content = lead.full_content || lead.snippet || '';
-    if (!showFullContent && shouldTruncateContent(content)) {
-      return content.substring(0, 300) + '...';
-    }
-    return content;
-  };
 
   if (authLoading || loading) {
     return (
@@ -641,9 +656,7 @@ const LeadsPage = () => {
                   
                   <Button
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    onClick={() => {
-                      window.location.href = `mailto:${selectedLead.sender_email}?subject=Re: ${selectedLead.subject}`;
-                    }}
+                    onClick={() => handleReplyToLead(selectedLead)}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Reply

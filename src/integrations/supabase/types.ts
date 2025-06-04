@@ -18,6 +18,8 @@ export type Database = {
           is_archived: boolean | null
           notes: string | null
           received_at: string
+          responded_at: string | null
+          response_time_minutes: number | null
           sender_email: string
           snippet: string | null
           status: string
@@ -33,6 +35,8 @@ export type Database = {
           is_archived?: boolean | null
           notes?: string | null
           received_at: string
+          responded_at?: string | null
+          response_time_minutes?: number | null
           sender_email: string
           snippet?: string | null
           status?: string
@@ -48,6 +52,8 @@ export type Database = {
           is_archived?: boolean | null
           notes?: string | null
           received_at?: string
+          responded_at?: string | null
+          response_time_minutes?: number | null
           sender_email?: string
           snippet?: string | null
           status?: string
