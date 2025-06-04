@@ -9,38 +9,17 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      user_settings: {
-        Row: {
-          id: string
-          user_id: string
-          settings: Json
-          created_at: string | null
-          updated_at: string | null
-        }
-        Insert: {
-          id?: string
-          user_id: string
-          settings: Json
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string
-          settings?: Json
-          created_at?: string | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       leads: {
         Row: {
           created_at: string
+          full_content: string | null
           gmail_message_id: string
           id: string
           is_archived: boolean | null
           notes: string | null
           received_at: string
+          responded_at: string | null
+          response_time_minutes: number | null
           sender_email: string
           snippet: string | null
           status: string
@@ -50,11 +29,14 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          full_content?: string | null
           gmail_message_id: string
           id?: string
           is_archived?: boolean | null
           notes?: string | null
           received_at: string
+          responded_at?: string | null
+          response_time_minutes?: number | null
           sender_email: string
           snippet?: string | null
           status?: string
@@ -64,11 +46,14 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          full_content?: string | null
           gmail_message_id?: string
           id?: string
           is_archived?: boolean | null
           notes?: string | null
           received_at?: string
+          responded_at?: string | null
+          response_time_minutes?: number | null
           sender_email?: string
           snippet?: string | null
           status?: string
@@ -93,6 +78,30 @@ export type Database = {
           google_access_token?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          settings: Json
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          settings?: Json
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          settings?: Json
+          updated_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

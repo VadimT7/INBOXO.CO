@@ -16,13 +16,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useGmailSync } from '@/hooks/useGmailSync';
+import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
 import { toast } from 'sonner';
 import { 
   RefreshCw, Mail, Search, Filter, Zap, Target, Trophy, Star,
   Clock, User, ChevronRight, Flame, Snowflake, ThermometerSun,
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
-  MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical
+  MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical,
+  ChevronDown, ChevronUp
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -49,14 +51,18 @@ interface Lead {
   sender_email: string;
   subject: string;
   snippet: string;
+  full_content?: string;
   received_at: string;
   status: string;
   is_archived?: boolean;
+  responded_at?: string | null;
+  response_time_minutes?: number | null;
 }
 
 const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
+  const { markLeadAsResponded } = useResponseTimeAnalytics(user?.id);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,6 +70,7 @@ const LeadsPage = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [notes, setNotes] = useState('');
   const [showArchived, setShowArchived] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -276,6 +283,19 @@ const LeadsPage = () => {
     window.open(gmailUrl, '_blank');
   };
 
+  const handleReplyToLead = async (lead: Lead) => {
+    // Mark as responded when user clicks reply
+    if (markLeadAsResponded) {
+      const success = await markLeadAsResponded(lead.id);
+      if (success) {
+        toast.success('Response time recorded!');
+      }
+    }
+    
+    // Open email client
+    window.location.href = `mailto:${lead.sender_email}?subject=Re: ${lead.subject}`;
+  };
+
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads();
@@ -284,6 +304,27 @@ const LeadsPage = () => {
       setLoading(false);
     }
   }, [authLoading, user?.id]);
+
+  useEffect(() => {
+    // Reset showFullContent when modal opens/closes or lead changes
+    if (!showDetailsModal || !selectedLead) {
+      setShowFullContent(false);
+    }
+  }, [showDetailsModal, selectedLead?.id]);
+
+  // Helper function to determine if content should be truncated
+  const shouldTruncateContent = (content: string) => {
+    return content && content.length > 300;
+  };
+
+  // Helper function to get display content
+  const getDisplayContent = (lead: Lead) => {
+    const content = lead.full_content || lead.snippet || '';
+    if (!showFullContent && shouldTruncateContent(content)) {
+      return content.substring(0, 300) + '...';
+    }
+    return content;
+  };
 
   // Filter leads based on search query and archive status
   const filteredLeads = useMemo(() => {
@@ -534,8 +575,34 @@ const LeadsPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-slate-600 mb-1">Preview</h3>
-                  <p className="text-slate-700 whitespace-pre-wrap">{selectedLead.snippet}</p>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-medium text-slate-600">Preview</h3>
+                    {shouldTruncateContent(selectedLead.full_content || selectedLead.snippet || '') && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setShowFullContent(!showFullContent)}
+                        className="text-blue-600 hover:text-blue-700 p-0 h-auto"
+                      >
+                        {showFullContent ? (
+                          <>
+                            <ChevronUp className="h-3 w-3 mr-1" />
+                            See Less
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3 mr-1" />
+                            See More
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3 max-h-64 overflow-y-auto">
+                    <p className="text-slate-700 whitespace-pre-wrap">
+                      {getDisplayContent(selectedLead)}
+                    </p>
+                  </div>
                 </div>
 
                 <div>
@@ -591,9 +658,7 @@ const LeadsPage = () => {
                   
                   <Button
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    onClick={() => {
-                      window.location.href = `mailto:${selectedLead.sender_email}?subject=Re: ${selectedLead.subject}`;
-                    }}
+                    onClick={() => handleReplyToLead(selectedLead)}
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Reply

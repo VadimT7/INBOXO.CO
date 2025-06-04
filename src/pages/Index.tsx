@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ArrowRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -26,10 +27,10 @@ const Index = () => {
       <div className="relative min-h-screen bg-gradient-to-b from-slate-900 to-black text-white overflow-hidden">
         {/* Ethereal blue gradient overlay */}
         <div className="absolute inset-x-0 bottom-0 h-[30vh] bg-gradient-to-t from-blue-500/10 via-blue-400/5 to-transparent pointer-events-none" />
-        <div className="relative z-10 pt-20 pb-16 sm:pt-24 sm:pb-20 lg:pt-32 lg:pb-28">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <div className="relative z-10 pt-24 pb-20 sm:pt-28 sm:pb-24 lg:pt-40 lg:pb-32">
+          <div className="max-w-8xl mx-auto px-6 sm:px-8 lg:px-10 text-center">
             <motion.h1
-              className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-10 pt-10"
+              className="text-6xl sm:text-7xl lg:text-8xl font-bold mb-12 pt-12"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -41,7 +42,7 @@ const Index = () => {
             </motion.h1>
             
             <motion.p
-              className="text-2xl sm:text-3xl text-slate-300 mb-16 max-w-4xl mx-auto leading-relaxed"
+              className="text-2xl sm:text-3xl lg:text-4xl text-slate-300 mb-20 max-w-5xl mx-auto leading-relaxed"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -50,49 +51,49 @@ const Index = () => {
             </motion.p>
 
             <motion.div
-              className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-24"
+              className="flex flex-col sm:flex-row gap-8 justify-center items-center mb-28"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
               <Button
                 size="lg"
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xl px-12 py-8 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-2xl px-16 py-10 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
                 asChild
               >
                 <Link to="/login">
                   Get Started Free
-                  <ArrowRight className="ml-2 h-6 w-6" />
+                  <ArrowRight className="ml-3 h-7 w-7" />
                 </Link>
               </Button>
               <Button
                 variant="outline"
                 size="lg"
-                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm text-xl px-12 py-8 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
+                className="border-slate-400 bg-slate-800/50 text-slate-200 hover:bg-slate-700 hover:text-white backdrop-blur-sm text-2xl px-16 py-10 shadow-lg hover:shadow-xl transition-all duration-300 rounded-2xl"
                 onClick={() => setShowDemoVideo(true)}
               >
-                <Play className="w-6 h-6 mr-2" />
+                <Play className="w-7 h-7 mr-3" />
                 Watch Demo
               </Button>
             </motion.div>
 
             <motion.div
-              className="mt-12 flex justify-center space-x-16 sm:space-x-24 text-slate-400"
+              className="mt-16 flex justify-center space-x-20 sm:space-x-28 text-slate-400"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
             >
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">92%</div>
-                <div className="text-lg sm:text-xl">Faster Response Time</div>
+                <div className="text-5xl sm:text-6xl font-bold mb-3 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">92%</div>
+                <div className="text-xl sm:text-2xl">Faster Response Time</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">4.3x</div>
-                <div className="text-lg sm:text-xl">Lead Conversion</div>
+                <div className="text-5xl sm:text-6xl font-bold mb-3 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">4.3x</div>
+                <div className="text-xl sm:text-2xl">Lead Conversion</div>
               </div>
               <div className="text-center">
-                <div className="text-4xl sm:text-5xl font-bold mb-2 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">16hrs</div>
-                <div className="text-lg sm:text-xl">Saved Weekly</div>
+                <div className="text-5xl sm:text-6xl font-bold mb-3 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">16hrs</div>
+                <div className="text-xl sm:text-2xl">Saved Weekly</div>
               </div>
             </motion.div>
           </div>
@@ -102,13 +103,13 @@ const Index = () => {
           <AnimatedHero />
         </div>
 
-        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="absolute bottom-10 left-1/2 transform -translate-x-1/2 z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <ChevronDown className="h-8 w-8 text-slate-400 animate-bounce" />
+            <ChevronDown className="h-10 w-10 text-slate-400 animate-bounce" />
           </motion.div>
         </div>
       </div>
@@ -133,9 +134,9 @@ const Index = () => {
 
       {/* Demo Video Dialog */}
       <Dialog open={showDemoVideo} onOpenChange={setShowDemoVideo}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>InboxFlow Product Demo</DialogTitle>
+            <DialogTitle className="text-xl">InboxFlow Product Demo</DialogTitle>
           </DialogHeader>
           <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden">
             <video
