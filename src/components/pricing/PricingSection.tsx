@@ -1,4 +1,3 @@
-
 import { motion } from 'framer-motion';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -92,16 +91,16 @@ const PricingCard = ({
         <div className="absolute -inset-[1px] bg-gradient-to-r from-blue-600 to-blue-800 rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300" />
       )}
       <Card 
-        className={`relative p-10 h-full transition-all duration-300 ${
+        className={`relative p-8 h-full transition-all duration-300 ${
           plan.highlighted 
             ? 'border-transparent bg-gradient-to-b from-white to-amber-50 shadow-xl hover:shadow-2xl hover:scale-105 transform'
             : 'hover:border-blue-600'
         }`}
       >
         {plan.highlighted ? (
-          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2">
+          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
             <motion.span 
-              className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-base font-medium px-5 py-2 rounded-full shadow-lg"
+              className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-sm font-medium px-4 py-1 rounded-full shadow-lg"
               animate={{
                 boxShadow: [
                   "0 0 10px rgba(251, 191, 36, 0.5)",
@@ -119,23 +118,23 @@ const PricingCard = ({
             </motion.span>
           </div>
         ) : null}
-        <div className="text-center mb-10">
-          <h3 className={`text-3xl font-bold mb-3 ${
+        <div className="text-center mb-8">
+          <h3 className={`text-2xl font-bold mb-2 ${
             plan.highlighted 
               ? 'bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent'
               : 'bg-gradient-to-r from-blue-700 to-blue-500 bg-clip-text text-transparent'
           }`}>{plan.name}</h3>
-          <p className="text-slate-600 mb-5 text-lg">{plan.description}</p>
+          <p className="text-slate-600 mb-4">{plan.description}</p>
           <div className="flex items-baseline justify-center">
-            <span className={`text-5xl font-bold ${
+            <span className={`text-4xl font-bold ${
               plan.highlighted 
                 ? 'bg-gradient-to-br from-amber-700 to-yellow-600 bg-clip-text text-transparent'
                 : 'bg-gradient-to-r from-blue-800 to-blue-600 bg-clip-text text-transparent'
             }`}>${plan.price}</span>
-            <span className="text-slate-600 ml-3 text-lg">/month</span>
+            <span className="text-slate-600 ml-2">/month</span>
           </div>
         </div>
-        <ul className="space-y-5 mb-10">
+        <ul className="space-y-4 mb-8">
           {plan.features.map((feature, i) => (
             <motion.li 
               key={i} 
@@ -144,17 +143,17 @@ const PricingCard = ({
               animate={plan.highlighted ? { opacity: 1, x: 0 } : {}}
               transition={{ delay: i * 0.1 }}
             >
-              <Check className={`w-6 h-6 mr-3 flex-shrink-0 mt-0.5 ${
+              <Check className={`w-5 h-5 mr-2 flex-shrink-0 mt-0.5 ${
                 plan.highlighted ? 'text-amber-500' : 'text-blue-600'
               }`} />
-              <span className="text-slate-700 text-lg">{feature}</span>
+              <span className="text-slate-700">{feature}</span>
             </motion.li>
           ))}
         </ul>
         <div className="text-center">
           <Button
             size="lg"
-            className={`w-full transition-all duration-300 text-lg px-8 py-6 ${
+            className={`w-full transition-all duration-300 ${
               plan.highlighted
                 ? 'bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 shadow-lg hover:shadow-xl hover:scale-105 transform'
                 : 'bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-800 hover:to-blue-700 shadow-md hover:shadow-lg'
@@ -164,7 +163,7 @@ const PricingCard = ({
           >
             {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Please wait...
               </>
             ) : (
@@ -223,11 +222,11 @@ const PricingSection = () => {
 
   return (
     <>
-      <section className="py-24 bg-white" id="pricing">
-        <div className="max-w-8xl mx-auto px-6 sm:px-8 lg:px-10">
-          <div className="text-center max-w-4xl mx-auto mb-20">
+      <section className="py-20 bg-white" id="pricing">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
             <motion.span
-              className="text-blue-600 font-semibold text-base uppercase tracking-wider"
+              className="text-blue-600 font-semibold text-sm uppercase tracking-wider"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -235,7 +234,7 @@ const PricingSection = () => {
               Pricing
             </motion.span>
             <motion.h2
-              className="mt-3 text-5xl font-bold text-slate-900"
+              className="mt-2 text-4xl font-bold text-slate-900"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -244,7 +243,7 @@ const PricingSection = () => {
               Simple, Transparent Pricing
             </motion.h2>
             <motion.p
-              className="mt-6 text-xl text-slate-600 leading-relaxed"
+              className="mt-4 text-lg text-slate-600"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -253,7 +252,7 @@ const PricingSection = () => {
               Choose the perfect plan for your team's needs
             </motion.p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {plans.map((plan, index) => (
               <PricingCard 
                 key={plan.name} 
@@ -276,4 +275,4 @@ const PricingSection = () => {
   );
 };
 
-export default PricingSection;
+export default PricingSection; 
