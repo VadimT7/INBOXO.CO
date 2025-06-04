@@ -9,8 +9,10 @@ import LoginPage from "./pages/LoginPage";
 import LeadsPage from "./pages/LeadsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
+import BillingPage from "./pages/BillingPage";
 import RevenuePage from "./pages/RevenuePage";
 import SuccessPage from "./pages/SuccessPage";
+import SubscriptionPage from "./pages/SubscriptionPage";
 import PricingPage from "./pages/PricingPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import CustomersPage from "./pages/CustomersPage";
@@ -18,6 +20,7 @@ import AboutPage from "./pages/AboutPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import TermsPage from "./pages/TermsPage";
 import PrivateRoute from "./components/auth/PrivateRoute";
+import SubscriptionGuard from "./components/auth/SubscriptionGuard";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
@@ -42,10 +45,20 @@ const App = () => (
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
           <Route
+            path="/subscription"
+            element={
+              <PrivateRoute>
+                <SubscriptionPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/leads"
             element={
               <PrivateRoute>
-                <LeadsPage />
+                <SubscriptionGuard>
+                  <LeadsPage />
+                </SubscriptionGuard>
               </PrivateRoute>
             }
           />
@@ -53,7 +66,9 @@ const App = () => (
             path="/analytics"
             element={
               <PrivateRoute>
-                <AnalyticsPage />
+                <SubscriptionGuard>
+                  <AnalyticsPage />
+                </SubscriptionGuard>
               </PrivateRoute>
             }
           />
@@ -61,7 +76,19 @@ const App = () => (
             path="/settings"
             element={
               <PrivateRoute>
-                <SettingsPage />
+                <SubscriptionGuard>
+                  <SettingsPage />
+                </SubscriptionGuard>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/billing"
+            element={
+              <PrivateRoute>
+                <SubscriptionGuard>
+                  <BillingPage />
+                </SubscriptionGuard>
               </PrivateRoute>
             }
           />
@@ -69,7 +96,9 @@ const App = () => (
             path="/revenue"
             element={
               <PrivateRoute>
-                <RevenuePage />
+                <SubscriptionGuard>
+                  <RevenuePage />
+                </SubscriptionGuard>
               </PrivateRoute>
             }
           />

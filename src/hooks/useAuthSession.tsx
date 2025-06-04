@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
@@ -54,7 +53,10 @@ export function useAuthSession(): AuthSession {
         return;
       }
 
+      // Clear subscription-related localStorage items on logout
       localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('userHasLoggedIn');
+      localStorage.removeItem('subscriptionPageSeen');
       toast.success('Successfully signed out');
       navigate('/', { replace: true });
     } catch (error) {

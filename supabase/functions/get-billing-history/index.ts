@@ -46,34 +46,46 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Get the request payload
-    const { priceId } = await req.json()
+    // Get user's Stripe customer ID from profile
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single()
 
-    if (!priceId) {
-      throw new Error('Price ID is required')
+    if (profileError || !profile?.stripe_customer_id) {
+      // Return empty history if no customer ID
+      return new Response(
+        JSON.stringify([]),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+          status: 200,
+        }
+      )
     }
 
-    // Create a Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/leads?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/subscription`,
-      automatic_tax: { enabled: true },
-      customer_email: user.email,
-      metadata: {
-        userId: user.id,
-      },
+    // Fetch invoices from Stripe
+    const invoices = await stripe.invoices.list({
+      customer: profile.stripe_customer_id,
+      limit: 10,
     })
 
+    // Transform Stripe invoices to our format
+    const billingHistory = invoices.data.map(invoice => ({
+      id: invoice.id,
+      date: new Date(invoice.created * 1000).toISOString(),
+      amount: invoice.amount_paid / 100, // Convert from cents
+      status: invoice.status === 'paid' ? 'paid' : 
+              invoice.status === 'open' ? 'pending' : 'failed',
+      description: invoice.lines.data[0]?.description || 'Subscription Payment',
+      invoice_url: invoice.hosted_invoice_url,
+    }))
+
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify(billingHistory),
       {
         headers: {
           ...corsHeaders,

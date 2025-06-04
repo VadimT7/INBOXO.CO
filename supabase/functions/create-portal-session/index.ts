@@ -46,34 +46,25 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Get the request payload
-    const { priceId } = await req.json()
+    // Get user's Stripe customer ID from profile
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('stripe_customer_id')
+      .eq('id', user.id)
+      .single()
 
-    if (!priceId) {
-      throw new Error('Price ID is required')
+    if (profileError || !profile?.stripe_customer_id) {
+      throw new Error('No customer record found')
     }
 
-    // Create a Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/leads?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/subscription`,
-      automatic_tax: { enabled: true },
-      customer_email: user.email,
-      metadata: {
-        userId: user.id,
-      },
+    // Create a Stripe customer portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: profile.stripe_customer_id,
+      return_url: `${req.headers.get('origin')}/billing`,
     })
 
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({ url: session.url }),
       {
         headers: {
           ...corsHeaders,

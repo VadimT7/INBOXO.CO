@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -65,6 +66,8 @@ const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const { markLeadAsResponded } = useResponseTimeAnalytics(user?.id);
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -382,6 +385,23 @@ const LeadsPage = () => {
       setShowAIResponse(false);
     }
   }, [showDetailsModal, selectedLead?.id]);
+
+  // Check for subscription success
+  useEffect(() => {
+    if (searchParams.get('subscription') === 'success') {
+      // Mark that user has completed subscription flow
+      localStorage.setItem('subscriptionPageSeen', 'true');
+      localStorage.setItem('userHasLoggedIn', 'true');
+      
+      // Show success message
+      toast.success('🎉 Welcome to InboxFlow! Your subscription is active. Let\'s start organizing your leads!', {
+        duration: 4000,
+      });
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/leads');
+    }
+  }, [searchParams]);
 
   // Helper function to determine if content should be truncated
   const shouldTruncateContent = (content: string) => {

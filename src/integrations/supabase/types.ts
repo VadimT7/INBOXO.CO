@@ -9,8 +9,57 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      ai_response_history: {
+        Row: {
+          created_at: string | null
+          generated_response: string
+          id: string
+          lead_content: string | null
+          lead_email: string
+          lead_id: string
+          lead_subject: string | null
+          length: string
+          tone: string
+          updated_at: string | null
+          user_id: string
+          was_sent: boolean | null
+          was_used: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          generated_response: string
+          id?: string
+          lead_content?: string | null
+          lead_email: string
+          lead_id: string
+          lead_subject?: string | null
+          length: string
+          tone: string
+          updated_at?: string | null
+          user_id: string
+          was_sent?: boolean | null
+          was_used?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          generated_response?: string
+          id?: string
+          lead_content?: string | null
+          lead_email?: string
+          lead_id?: string
+          lead_subject?: string | null
+          length?: string
+          tone?: string
+          updated_at?: string | null
+          user_id?: string
+          was_sent?: boolean | null
+          was_used?: boolean | null
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
+          answered: boolean | null
           created_at: string
           full_content: string | null
           gmail_message_id: string
@@ -28,6 +77,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          answered?: boolean | null
           created_at?: string
           full_content?: string | null
           gmail_message_id: string
@@ -45,6 +95,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          answered?: boolean | null
           created_at?: string
           full_content?: string | null
           gmail_message_id?: string
@@ -67,16 +118,34 @@ export type Database = {
         Row: {
           google_access_token: string | null
           id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_created_at: string | null
+          subscription_plan: string | null
+          subscription_status: string | null
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
           google_access_token?: string | null
           id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_created_at?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
           google_access_token?: string | null
           id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_created_at?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -138,6 +207,81 @@ export type Database = {
         }
         Relationships: []
       }
+      user_usage: {
+        Row: {
+          ai_responses_generated: number | null
+          api_calls_made: number | null
+          created_at: string | null
+          emails_sent: number | null
+          id: string
+          leads_processed: number | null
+          period_month: string
+          storage_used_mb: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_responses_generated?: number | null
+          api_calls_made?: number | null
+          created_at?: string | null
+          emails_sent?: number | null
+          id?: string
+          leads_processed?: number | null
+          period_month: string
+          storage_used_mb?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_responses_generated?: number | null
+          api_calls_made?: number | null
+          created_at?: string | null
+          emails_sent?: number | null
+          id?: string
+          leads_processed?: number | null
+          period_month?: string
+          storage_used_mb?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_writing_style: {
+        Row: {
+          created_at: string | null
+          custom_phrases: Json | null
+          id: string
+          preferred_length: string | null
+          preferred_tone: string | null
+          response_templates: Json | null
+          signature: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          custom_phrases?: Json | null
+          id?: string
+          preferred_length?: string | null
+          preferred_tone?: string | null
+          response_templates?: Json | null
+          signature?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          custom_phrases?: Json | null
+          id?: string
+          preferred_length?: string | null
+          preferred_tone?: string | null
+          response_templates?: Json | null
+          signature?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -151,6 +295,28 @@ export type Database = {
           has_service_role_access: boolean
           row_count: number
         }[]
+      }
+      upsert_current_month_usage: {
+        Args: {
+          p_user_id: string
+          p_leads_delta?: number
+          p_api_calls_delta?: number
+          p_storage_mb_delta?: number
+          p_ai_responses_delta?: number
+          p_emails_delta?: number
+        }
+        Returns: {
+          ai_responses_generated: number | null
+          api_calls_made: number | null
+          created_at: string | null
+          emails_sent: number | null
+          id: string
+          leads_processed: number | null
+          period_month: string
+          storage_used_mb: number | null
+          updated_at: string | null
+          user_id: string
+        }
       }
     }
     Enums: {

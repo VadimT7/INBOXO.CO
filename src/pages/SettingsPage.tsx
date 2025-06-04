@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -77,6 +78,7 @@ interface UserSettings {
 
 const SettingsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
+  const navigate = useNavigate();
   const [settings, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -745,20 +747,15 @@ const SettingsPage = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div>
-                      <p className="font-medium">Current Plan</p>
-                      <p className="text-sm text-slate-600">Professional Plan - $29/month</p>
+                      <p className="font-medium">Manage Subscription</p>
+                      <p className="text-sm text-slate-600">View and manage your billing, subscription, and usage</p>
                     </div>
-                    <Badge variant="default">Active</Badge>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button variant="outline">
+                    <Button 
+                      onClick={() => navigate('/billing')}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                    >
                       <CreditCard className="h-4 w-4 mr-2" />
-                      Billing History
-                    </Button>
-                    <Button variant="outline">
-                      <Crown className="h-4 w-4 mr-2" />
-                      Upgrade Plan
+                      Manage Billing
                     </Button>
                   </div>
                 </CardContent>

@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 const CTASection = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative py-24 overflow-hidden">
       {/* Gradient background */}
@@ -44,6 +47,7 @@ const CTASection = () => {
           >
             <Button
               size="lg"
+              onClick={() => navigate('/login')}
               className="relative group overflow-hidden bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 hover:from-blue-600 hover:via-indigo-600 hover:to-purple-600 text-white text-xl px-12 py-8 rounded-2xl transform hover:scale-105 transition-all duration-300 shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_20px_50px_rgba(8,_112,_184,_0.7)]"
             >
               <span className="z-10">Start Free Trial</span>

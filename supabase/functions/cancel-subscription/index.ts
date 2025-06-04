@@ -46,34 +46,47 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Get the request payload
-    const { priceId } = await req.json()
+    // Get user's Stripe subscription ID from profile
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('stripe_subscription_id, subscription_status')
+      .eq('id', user.id)
+      .single()
 
-    if (!priceId) {
-      throw new Error('Price ID is required')
+    if (profileError || !profile?.stripe_subscription_id) {
+      throw new Error('No active subscription found')
     }
 
-    // Create a Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price: priceId,
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/leads?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/subscription`,
-      automatic_tax: { enabled: true },
-      customer_email: user.email,
-      metadata: {
-        userId: user.id,
-      },
-    })
+    if (profile.subscription_status !== 'active') {
+      throw new Error('Subscription is not active')
+    }
+
+    // Cancel the subscription at period end
+    const canceledSubscription = await stripe.subscriptions.update(
+      profile.stripe_subscription_id,
+      {
+        cancel_at_period_end: true,
+      }
+    )
+
+    // Update the profile with canceled status
+    const { error: updateError } = await supabaseClient
+      .from('profiles')
+      .update({ 
+        subscription_status: 'canceled',
+      })
+      .eq('id', user.id)
+
+    if (updateError) {
+      console.error('Error updating profile:', updateError)
+    }
 
     return new Response(
-      JSON.stringify({ sessionId: session.id }),
+      JSON.stringify({ 
+        success: true,
+        canceled_at: canceledSubscription.canceled_at,
+        current_period_end: canceledSubscription.current_period_end,
+      }),
       {
         headers: {
           ...corsHeaders,
