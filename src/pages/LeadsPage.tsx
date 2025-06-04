@@ -75,6 +75,7 @@ const LeadsPage = () => {
   const [showFullContent, setShowFullContent] = useState(false);
   const [showAIResponse, setShowAIResponse] = useState(false);
   const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -266,6 +267,12 @@ const LeadsPage = () => {
 
   const toggleAnsweredStatus = async (leadId: string, answered: boolean) => {
     try {
+      // Trigger animation only when marking as answered
+      if (answered) {
+        setIsAnimating(true);
+        setTimeout(() => setIsAnimating(false), 1000);
+      }
+
       const updateData: any = { answered };
       
       // If marking as answered, also set responded_at if not already set
@@ -642,23 +649,111 @@ const LeadsPage = () => {
                     {selectedLead?.status}
                   </Badge>
                   {selectedLead && (
-                    <Button
-                      size="sm"
-                      variant={selectedLead.answered ? "default" : "outline"}
-                      onClick={() => toggleAnsweredStatus(selectedLead.id, !selectedLead.answered)}
-                      className={cn(
-                        "flex items-center gap-1",
-                        selectedLead.answered 
-                          ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" 
-                          : "hover:bg-green-50"
-                      )}
-                    >
-                      <CheckCircle2 className={cn(
-                        "h-3 w-3",
-                        selectedLead.answered ? "text-green-700" : "text-slate-400"
-                      )} />
-                      {selectedLead.answered ? "Answered" : "Mark Answered"}
-                    </Button>
+                    <div className="relative">
+                      {/* Celebration particles */}
+                      <AnimatePresence>
+                        {isAnimating && (
+                          <>
+                            {[...Array(8)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                className="absolute w-2 h-2 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+                                style={{
+                                  top: '50%',
+                                  left: '50%',
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                                initial={{ 
+                                  scale: 0,
+                                  x: 0,
+                                  y: 0,
+                                  opacity: 1
+                                }}
+                                animate={{ 
+                                  scale: [0, 1, 0],
+                                  x: Math.cos(i * 45 * Math.PI / 180) * 60,
+                                  y: Math.sin(i * 45 * Math.PI / 180) * 60,
+                                  opacity: [1, 1, 0]
+                                }}
+                                exit={{ opacity: 0 }}
+                                transition={{ 
+                                  duration: 0.8,
+                                  ease: "easeOut"
+                                }}
+                              />
+                            ))}
+                            
+                            {/* Radial glow effect */}
+                            <motion.div
+                              className="absolute inset-0 bg-green-400 rounded-lg opacity-20"
+                              initial={{ scale: 1, opacity: 0 }}
+                              animate={{ 
+                                scale: [1, 1.8, 1],
+                                opacity: [0, 0.3, 0]
+                              }}
+                              transition={{ duration: 0.6, ease: "easeOut" }}
+                            />
+                            
+                            {/* Success sparkles */}
+                            {[...Array(5)].map((_, i) => (
+                              <motion.div
+                                key={`sparkle-${i}`}
+                                className="absolute w-1 h-1 bg-yellow-400 rounded-full"
+                                style={{
+                                  top: `${20 + i * 15}%`,
+                                  left: `${15 + i * 20}%`,
+                                }}
+                                initial={{ scale: 0, rotate: 0, opacity: 0 }}
+                                animate={{ 
+                                  scale: [0, 1.5, 0],
+                                  rotate: [0, 180, 360],
+                                  opacity: [0, 1, 0]
+                                }}
+                                transition={{ 
+                                  duration: 0.8,
+                                  delay: i * 0.1,
+                                  ease: "easeOut"
+                                }}
+                              />
+                            ))}
+                          </>
+                        )}
+                      </AnimatePresence>
+                      
+                      <motion.div
+                        animate={isAnimating ? {
+                          scale: [1, 1.1, 1],
+                          rotate: [0, -2, 2, 0]
+                        } : {}}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                      >
+                        <Button
+                          size="sm"
+                          variant={selectedLead.answered ? "default" : "outline"}
+                          onClick={() => toggleAnsweredStatus(selectedLead.id, !selectedLead.answered)}
+                          className={cn(
+                            "flex items-center gap-1 relative overflow-hidden",
+                            selectedLead.answered 
+                              ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" 
+                              : "hover:bg-green-50"
+                          )}
+                        >
+                          <motion.div
+                            animate={selectedLead.answered && isAnimating ? {
+                              scale: [1, 1.3, 1],
+                              rotate: [0, 360]
+                            } : {}}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          >
+                            <CheckCircle2 className={cn(
+                              "h-3 w-3",
+                              selectedLead.answered ? "text-green-700" : "text-slate-400"
+                            )} />
+                          </motion.div>
+                          {selectedLead.answered ? "Answered" : "Mark Answered"}
+                        </Button>
+                      </motion.div>
+                    </div>
                   )}
                 </div>
               </DialogTitle>
@@ -732,28 +827,77 @@ const LeadsPage = () => {
                 </div>
 
                 <div>
-                  <h3 className="text-sm font-medium text-slate-600 mb-1">Received</h3>
-                  <p className="text-slate-700">
-                    {new Date(selectedLead.received_at).toLocaleString()}
-                  </p>
-                </div>
-
-                {selectedLead.answered && selectedLead.responded_at && (
-                  <div>
-                    <h3 className="text-sm font-medium text-slate-600 mb-1">Answered</h3>
-                    <p className="text-slate-700">
-                      {new Date(selectedLead.responded_at).toLocaleString()}
-                      {selectedLead.response_time_minutes && (
-                        <span className="text-sm text-slate-500 ml-2">
-                          (Response time: {selectedLead.response_time_minutes < 60 
-                            ? `${selectedLead.response_time_minutes}m` 
-                            : `${Math.floor(selectedLead.response_time_minutes / 60)}h ${selectedLead.response_time_minutes % 60}m`
-                          })
-                        </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="min-h-[80px]">
+                      <h3 className="text-sm font-medium text-slate-600 mb-1">Received</h3>
+                      <p className="text-slate-700 mb-6">
+                        {new Date(selectedLead.received_at).toLocaleString()}
+                      </p>
+                    </div>
+                    
+                    <AnimatePresence mode="wait">
+                      {selectedLead.answered && selectedLead.responded_at && (
+                        <motion.div
+                          key="answered-section"
+                          className="min-h-[80px]"
+                          initial={{ 
+                            opacity: 0, 
+                            x: 20,
+                            scale: 0.95
+                          }}
+                          animate={{ 
+                            opacity: 1, 
+                            x: 0,
+                            scale: 1
+                          }}
+                          exit={{ 
+                            opacity: 0, 
+                            x: 20,
+                            scale: 0.95
+                          }}
+                          transition={{ 
+                            duration: 0.5, 
+                            ease: "easeOut",
+                            type: "spring",
+                            stiffness: 100,
+                            damping: 15
+                          }}
+                        >
+                          <motion.h3 
+                            className="text-sm font-medium text-slate-600 mb-1"
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.2, duration: 0.3 }}
+                          >
+                            Answered
+                          </motion.h3>
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.3, duration: 0.3 }}
+                          >
+                            <p className="text-slate-700">
+                              {new Date(selectedLead.responded_at).toLocaleString()}
+                              {selectedLead.response_time_minutes && (
+                                <motion.span 
+                                  className="text-sm text-slate-500 block mt-1"
+                                  initial={{ opacity: 0, y: 5 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.4, duration: 0.3 }}
+                                >
+                                  Response time: {selectedLead.response_time_minutes < 60 
+                                    ? `${selectedLead.response_time_minutes}m` 
+                                    : `${Math.floor(selectedLead.response_time_minutes / 60)}h ${selectedLead.response_time_minutes % 60}m`
+                                  }
+                                </motion.span>
+                              )}
+                            </p>
+                          </motion.div>
+                        </motion.div>
                       )}
-                    </p>
+                    </AnimatePresence>
                   </div>
-                )}
+                </div>
 
                 <div>
                   <h3 className="text-sm font-medium text-slate-600 mb-1">Notes</h3>
@@ -1066,7 +1210,7 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
           }
         }}
         onSelect={(lead) => {
-          // Don't trigger onSelect from the card itself since we handle it in the wrapper
+          // Don't trigger onSelect from the card itself since we handle it in the wrapper's onClick
           if (!isDragging) {
             // This is now handled by the wrapper's onClick
           }
