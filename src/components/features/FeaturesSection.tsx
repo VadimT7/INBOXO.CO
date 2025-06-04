@@ -1,9 +1,10 @@
+
 import { motion, useMotionValue } from 'framer-motion';
 import { Inbox, Zap, Clock, Bot, BarChart, Shield, BrainCircuit } from 'lucide-react';
 
 const features = [
   {
-    icon: <Inbox className="w-8 h-8" />,
+    icon: <Inbox className="w-9 h-9" />,
     title: "Smart Inbox Management",
     description: "Automatically categorize and prioritize your leads based on intelligent algorithms.",
     gradient: "from-blue-500 to-cyan-500",
@@ -11,7 +12,7 @@ const features = [
     size: "large"
   },
   {
-    icon: <Zap className="w-8 h-8" />,
+    icon: <Zap className="w-9 h-9" />,
     title: "Instant Lead Scoring",
     description: "Real-time classification of leads into Hot, Warm, and Cold categories.",
     gradient: "from-purple-500 to-pink-500",
@@ -19,7 +20,7 @@ const features = [
     size: "small"
   },
   {
-    icon: <Clock className="w-8 h-8" />,
+    icon: <Clock className="w-9 h-9" />,
     title: "Time-Saving Automation",
     description: "Save hours daily with automated lead sorting and response management.",
     gradient: "from-orange-500 to-red-500",
@@ -27,7 +28,7 @@ const features = [
     size: "medium"
   },
   {
-    icon: <Bot className="w-8 h-8" />,
+    icon: <Bot className="w-9 h-9" />,
     title: "AI-Powered Responses",
     description: "Generate contextual responses to leads using advanced AI technology.",
     gradient: "from-green-500 to-emerald-500",
@@ -35,7 +36,7 @@ const features = [
     size: "large"
   },
   {
-    icon: <BarChart className="w-8 h-8" />,
+    icon: <BarChart className="w-9 h-9" />,
     title: "Analytics Dashboard",
     description: "Track lead conversion rates and response times with detailed analytics.",
     gradient: "from-yellow-500 to-orange-500",
@@ -43,7 +44,7 @@ const features = [
     size: "medium"
   },
   {
-    icon: <Shield className="w-8 h-8" />,
+    icon: <Shield className="w-9 h-9" />,
     title: "Secure & Private",
     description: "Enterprise-grade security with end-to-end encryption for your data.",
     gradient: "from-teal-500 to-cyan-500",
@@ -51,7 +52,7 @@ const features = [
     size: "small"
   },
   {
-    icon: <BrainCircuit className="w-8 h-8" />,
+    icon: <BrainCircuit className="w-9 h-9" />,
     title: "Smart Follow-up Intelligence",
     description: "AI-driven timing suggestions and personalized follow-up sequences for optimal engagement.",
     gradient: "from-rose-500 to-pink-500",
@@ -95,7 +96,7 @@ const FeatureCard = ({ feature, index }: { feature: typeof features[0], index: n
       }}
     >
       <motion.div
-        className={`relative overflow-hidden h-full p-8 ${
+        className={`relative overflow-hidden h-full p-10 ${
           feature.size === 'large' 
             ? 'bg-gradient-to-br' 
             : 'bg-white'
@@ -115,21 +116,21 @@ const FeatureCard = ({ feature, index }: { feature: typeof features[0], index: n
           <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 transition-opacity duration-300`} />
         )}
         
-        <div className={`w-16 h-16 rounded-2xl ${
+        <div className={`w-18 h-18 rounded-2xl ${
           feature.size === 'large' 
             ? 'bg-white/10 text-white' 
             : `bg-gradient-to-br ${feature.gradient}`
-        } flex items-center justify-center mb-6 transform-gpu transition-transform duration-300 hover:scale-110`}>
+        } flex items-center justify-center mb-8 transform-gpu transition-transform duration-300 hover:scale-110`}>
           {feature.icon}
         </div>
-        <h3 className={`text-2xl font-bold mb-4 ${
+        <h3 className={`text-2xl lg:text-3xl font-bold mb-5 ${
           feature.size === 'large' 
             ? 'text-white' 
             : 'bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent'
         }`}>
           {feature.title}
         </h3>
-        <p className={`${
+        <p className={`text-lg ${
           feature.size === 'large' 
             ? 'text-white/90' 
             : 'text-slate-600'
@@ -151,11 +152,11 @@ const FeatureCard = ({ feature, index }: { feature: typeof features[0], index: n
 
 const FeaturesSection = () => {
   return (
-    <section className="py-20 bg-gradient-to-b from-white to-slate-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center max-w-3xl mx-auto mb-16">
+    <section className="py-24 bg-gradient-to-b from-white to-slate-50">
+      <div className="max-w-8xl mx-auto px-6 sm:px-8 lg:px-10">
+        <div className="text-center max-w-4xl mx-auto mb-20">
           <motion.h2 
-            className="text-4xl font-bold text-slate-900 mb-4"
+            className="text-5xl font-bold text-slate-900 mb-6"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -163,7 +164,7 @@ const FeaturesSection = () => {
             Powerful Features for Modern Teams
           </motion.h2>
           <motion.p 
-            className="text-lg text-slate-600"
+            className="text-xl text-slate-600 leading-relaxed"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -172,7 +173,7 @@ const FeaturesSection = () => {
             Everything you need to streamline your lead management process and boost conversion rates.
           </motion.p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-3 gap-8 auto-rows-fr">
+        <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-3 gap-10 auto-rows-fr">
           {features.map((feature, index) => (
             <FeatureCard key={feature.title} feature={feature} index={index} />
           ))}
@@ -182,4 +183,4 @@ const FeaturesSection = () => {
   );
 };
 
-export default FeaturesSection; 
+export default FeaturesSection;

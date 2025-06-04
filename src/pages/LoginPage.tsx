@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,7 +19,7 @@ const LoginPage = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
-        <p>Loading...</p>
+        <p className="text-xl">Loading...</p>
       </div>
     );
   }
@@ -28,26 +29,26 @@ const LoginPage = () => {
   if (session) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-900 text-white">
-        <p>Redirecting to leads...</p>
+        <p className="text-xl">Redirecting to leads...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-4">
-      <div className="relative z-10 flex flex-col items-center text-center space-y-8 bg-slate-800 p-8 sm:p-12 rounded-xl shadow-2xl">
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-100">Welcome Back</h1>
-        <p className="text-slate-300 max-w-md">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 to-black text-white p-6">
+      <div className="relative z-10 flex flex-col items-center text-center space-y-10 bg-slate-800 p-12 sm:p-16 rounded-xl shadow-2xl max-w-2xl">
+        <h1 className="text-4xl sm:text-5xl font-bold text-slate-100">Welcome Back</h1>
+        <p className="text-xl text-slate-300 max-w-lg leading-relaxed">
           Connect your Gmail to automatically organize your leads and send smart replies.
         </p>
         <Button
           onClick={signInWithGoogle}
           size="lg"
-          className="font-semibold text-lg px-8 py-6 bg-blue-600 hover:bg-blue-500 text-white shadow-lg transform transition-all duration-200 hover:scale-105 w-full sm:w-auto"
+          className="font-semibold text-xl px-10 py-8 bg-blue-600 hover:bg-blue-500 text-white shadow-lg transform transition-all duration-200 hover:scale-105 w-full sm:w-auto"
         >
-          <Mail className="mr-2 h-5 w-5" /> Login with Google
+          <Mail className="mr-3 h-6 w-6" /> Login with Google
         </Button>
-        <p className="text-xs text-slate-400 mt-4">
+        <p className="text-sm text-slate-400 mt-6 leading-relaxed">
           By signing in, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
