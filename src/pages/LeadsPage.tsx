@@ -58,6 +58,7 @@ interface Lead {
   is_archived?: boolean;
   responded_at?: string | null;
   response_time_minutes?: number | null;
+  answered?: boolean;
 }
 
 const LeadsPage = () => {
@@ -73,6 +74,7 @@ const LeadsPage = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [showAIResponse, setShowAIResponse] = useState(false);
+  const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -262,6 +264,53 @@ const LeadsPage = () => {
     }
   };
 
+  const toggleAnsweredStatus = async (leadId: string, answered: boolean) => {
+    try {
+      const updateData: any = { answered };
+      
+      // If marking as answered, also set responded_at if not already set
+      if (answered) {
+        const lead = leads.find(l => l.id === leadId);
+        if (lead && !lead.responded_at) {
+          updateData.responded_at = new Date().toISOString();
+          
+          // Calculate response time if we have the received_at time
+          if (lead.received_at) {
+            const responseTime = Math.floor(
+              (new Date().getTime() - new Date(lead.received_at).getTime()) / (1000 * 60)
+            );
+            updateData.response_time_minutes = responseTime;
+          }
+        }
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .update(updateData)
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to update lead status');
+        return;
+      }
+
+      // Update leads state
+      setLeads(prev => prev.map(lead => 
+        lead.id === leadId ? { ...lead, ...updateData } : lead
+      ));
+
+      // Update selectedLead state immediately if it's the same lead
+      if (selectedLead && selectedLead.id === leadId) {
+        setSelectedLead(prev => prev ? { ...prev, ...updateData } : null);
+      }
+
+      toast.success(answered ? '✅ Lead marked as answered!' : '↩️ Lead marked as unanswered');
+    } catch (error) {
+      console.error('Error updating answered status:', error);
+      toast.error('Failed to update lead status');
+    }
+  };
+
   const handleSyncGmail = async () => {
     try {
       console.log('Starting Gmail sync from LeadsPage...');
@@ -293,6 +342,9 @@ const LeadsPage = () => {
         toast.success('Response time recorded!');
       }
     }
+    
+    // Automatically mark as answered
+    await toggleAnsweredStatus(lead.id, true);
     
     // Open email client with optional pre-filled message
     const subject = `Re: ${lead.subject}`;
@@ -348,9 +400,13 @@ const LeadsPage = () => {
       
       const matchesArchiveFilter = showArchived ? lead.is_archived : !lead.is_archived;
       
-      return matchesSearch && matchesArchiveFilter;
+      const matchesAnsweredFilter = answeredFilter === 'all' || 
+        (answeredFilter === 'answered' && lead.answered) ||
+        (answeredFilter === 'unanswered' && !lead.answered);
+      
+      return matchesSearch && matchesArchiveFilter && matchesAnsweredFilter;
     });
-  }, [leads, searchQuery, showArchived]);
+  }, [leads, searchQuery, showArchived, answeredFilter]);
 
   const categorizedLeads = useMemo(() => ({
     unclassified: filteredLeads.filter(lead => lead.status === 'unclassified'),
@@ -362,7 +418,9 @@ const LeadsPage = () => {
   // Basic metrics
   const totalLeads = leads.filter(l => !l.is_archived).length;
   const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
+  const answeredLeads = leads.filter(l => !l.is_archived && l.answered).length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
+  const answeredPercentage = totalLeads > 0 ? (answeredLeads / totalLeads) * 100 : 0;
 
   if (authLoading || loading) {
     return (
@@ -426,6 +484,20 @@ const LeadsPage = () => {
                   </div>
                 </div>
               </motion.div>
+
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex items-center space-x-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <div>
+                    <p className="text-xs text-slate-600">Answered</p>
+                    <p className="text-lg font-bold text-slate-900">{answeredLeads}</p>
+                    <p className="text-xs text-slate-500">{answeredPercentage.toFixed(0)}%</p>
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </div>
 
@@ -442,6 +514,27 @@ const LeadsPage = () => {
             </div>
             
             <div className="flex gap-2">
+              <Select value={answeredFilter} onValueChange={(value: 'all' | 'answered' | 'unanswered') => setAnsweredFilter(value)}>
+                <SelectTrigger className="w-32 rounded-xl bg-white/70 backdrop-blur-sm border-white/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="all" className="rounded-lg">All Leads</SelectItem>
+                  <SelectItem value="answered" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle2 className="h-3 w-3 text-green-500" />
+                      <span>Answered</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="unanswered" className="rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <Circle className="h-3 w-3 text-slate-400" />
+                      <span>Unanswered</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              
               <Button
                 variant={showArchived ? 'default' : 'outline'}
                 onClick={() => setShowArchived(!showArchived)}
@@ -537,16 +630,37 @@ const LeadsPage = () => {
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader className="flex-shrink-0">
-              <DialogTitle className="flex items-center justify-between">
+              <DialogTitle className="flex items-center justify-between pr-8">
                 <span>Lead Details</span>
-                <Badge variant={
-                  selectedLead?.status === 'hot' ? 'destructive' :
-                  selectedLead?.status === 'warm' ? 'default' :
-                  selectedLead?.status === 'cold' ? 'secondary' :
-                  'outline'
-                }>
-                  {selectedLead?.status}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant={
+                    selectedLead?.status === 'hot' ? 'destructive' :
+                    selectedLead?.status === 'warm' ? 'default' :
+                    selectedLead?.status === 'cold' ? 'secondary' :
+                    'outline'
+                  }>
+                    {selectedLead?.status}
+                  </Badge>
+                  {selectedLead && (
+                    <Button
+                      size="sm"
+                      variant={selectedLead.answered ? "default" : "outline"}
+                      onClick={() => toggleAnsweredStatus(selectedLead.id, !selectedLead.answered)}
+                      className={cn(
+                        "flex items-center gap-1",
+                        selectedLead.answered 
+                          ? "bg-green-100 text-green-700 border-green-200 hover:bg-green-200" 
+                          : "hover:bg-green-50"
+                      )}
+                    >
+                      <CheckCircle2 className={cn(
+                        "h-3 w-3",
+                        selectedLead.answered ? "text-green-700" : "text-slate-400"
+                      )} />
+                      {selectedLead.answered ? "Answered" : "Mark Answered"}
+                    </Button>
+                  )}
+                </div>
               </DialogTitle>
             </DialogHeader>
             
@@ -623,6 +737,23 @@ const LeadsPage = () => {
                     {new Date(selectedLead.received_at).toLocaleString()}
                   </p>
                 </div>
+
+                {selectedLead.answered && selectedLead.responded_at && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-600 mb-1">Answered</h3>
+                    <p className="text-slate-700">
+                      {new Date(selectedLead.responded_at).toLocaleString()}
+                      {selectedLead.response_time_minutes && (
+                        <span className="text-sm text-slate-500 ml-2">
+                          (Response time: {selectedLead.response_time_minutes < 60 
+                            ? `${selectedLead.response_time_minutes}m` 
+                            : `${Math.floor(selectedLead.response_time_minutes / 60)}h ${selectedLead.response_time_minutes % 60}m`
+                          })
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <h3 className="text-sm font-medium text-slate-600 mb-1">Notes</h3>
@@ -763,6 +894,7 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
       <Card className={cn(
         "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden",
         lead.is_archived && "opacity-60",
+        lead.answered && "bg-green-50/80 border-green-200/40",
         !isBeingDragged && "cursor-pointer"
       )}>
         <CardHeader className="pb-3">
@@ -773,6 +905,11 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
                 <CardTitle className="text-sm font-medium text-slate-900 truncate">
                   {lead.sender_email}
                 </CardTitle>
+                {lead.answered && (
+                  <div className="ml-auto">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  </div>
+                )}
               </div>
               <div className="flex items-center space-x-2">
                 <urgency.icon className={`h-3 w-3 ${urgency.color}`} />
@@ -783,6 +920,12 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
                 {lead.is_archived && (
                   <Badge variant="secondary" className="text-xs px-2 py-0">
                     Archived
+                  </Badge>
+                )}
+                {lead.answered && (
+                  <Badge variant="default" className="text-xs px-2 py-0 bg-green-100 text-green-700 border-green-200">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Answered
                   </Badge>
                 )}
               </div>
@@ -961,6 +1104,8 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
     }
   });
 
+  const answeredCount = leads.filter(lead => lead.answered).length;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -984,7 +1129,14 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
             </div>
             <div>
               <h2 className="font-semibold text-slate-700">{column.title}</h2>
-              <p className="text-sm text-slate-500">{column.count} leads</p>
+              <p className="text-sm text-slate-500">
+                {column.count} leads
+                {answeredCount > 0 && (
+                  <span className="text-green-600 ml-1">
+                    • {answeredCount} answered
+                  </span>
+                )}
+              </p>
             </div>
           </div>
           <Badge 
