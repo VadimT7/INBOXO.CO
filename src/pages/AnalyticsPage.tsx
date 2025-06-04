@@ -104,10 +104,10 @@ const AnalyticsPage = () => {
           className="text-center"
         >
           <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
-            <BarChart3 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-blue-600" />
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-200 border-t-blue-600 mx-auto mb-6"></div>
+            <BarChart3 className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 h-8 w-8 text-blue-600" />
           </div>
-          <p className="text-slate-600 font-medium">Loading analytics...</p>
+          <p className="text-slate-600 font-medium text-lg">Loading analytics...</p>
         </motion.div>
       </div>
     );
@@ -128,42 +128,42 @@ const AnalyticsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-24 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto mt-32">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-28 p-6 sm:p-8 lg:p-12">
+      <div className="max-w-8xl mx-auto mt-36">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-10"
         >
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
                 Analytics Dashboard
               </h1>
-              <p className="text-slate-600 mt-2 text-lg">Deep insights into your lead performance 📊</p>
+              <p className="text-slate-600 mt-3 text-xl">Deep insights into your lead performance 📊</p>
             </div>
           </div>
         </motion.div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                <Mail className="h-4 w-4 text-blue-500" />
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base font-medium">Total Leads</CardTitle>
+                <Mail className="h-5 w-5 text-blue-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalLeads}</div>
-                <p className="text-xs text-slate-500 mt-1">
+                <div className="text-3xl font-bold">{totalLeads}</div>
+                <p className="text-sm text-slate-500 mt-2">
                   {classifiedLeads}/{totalLeads} classified
                 </p>
-                <Progress value={(classifiedLeads / totalLeads) * 100} className="mt-2" />
+                <Progress value={(classifiedLeads / totalLeads) * 100} className="mt-3" />
               </CardContent>
             </Card>
           </motion.div>
@@ -173,17 +173,17 @@ const AnalyticsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-                <Target className="h-4 w-4 text-green-500" />
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base font-medium">Conversion Rate</CardTitle>
+                <Target className="h-5 w-5 text-green-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{conversionRate.toFixed(1)}%</div>
-                <p className="text-xs text-slate-500 mt-1">
+                <div className="text-3xl font-bold">{conversionRate.toFixed(1)}%</div>
+                <p className="text-sm text-slate-500 mt-2">
                   {hotLeads} hot leads
                 </p>
-                <Progress value={conversionRate} className="mt-2" />
+                <Progress value={conversionRate} className="mt-3" />
               </CardContent>
             </Card>
           </motion.div>
@@ -193,23 +193,23 @@ const AnalyticsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Avg. Response Time</CardTitle>
-                <Clock className="h-4 w-4 text-orange-500" />
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base font-medium">Avg. Response Time</CardTitle>
+                <Clock className="h-5 w-5 text-orange-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-3xl font-bold">
                   {responseLoading ? '...' : responseMetrics.averageResponseTimeFormatted}
                 </div>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-sm text-slate-500 mt-2">
                   {responseMetrics.totalResponded > 0 
                     ? `${responseMetrics.responseRate}% response rate`
                     : 'No responses tracked yet'
                   }
                 </p>
-                <div className="flex items-center mt-2">
-                  <Badge variant="outline" className="text-xs">
+                <div className="flex items-center mt-3">
+                  <Badge variant="outline" className="text-sm">
                     {responseMetrics.withinBusinessHours ? 'Within business hours' : 'After hours'}
                   </Badge>
                 </div>
@@ -222,25 +222,25 @@ const AnalyticsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Lead Quality</CardTitle>
-                <Star className="h-4 w-4 text-yellow-500" />
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+                <CardTitle className="text-base font-medium">Lead Quality</CardTitle>
+                <Star className="h-5 w-5 text-yellow-500" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">
+                <div className="text-3xl font-bold">
                   {leadScores.length > 0 
                     ? Math.round(leadScores.reduce((sum, score) => sum + score.score, 0) / leadScores.length)
                     : 0
                   }
                 </div>
-                <p className="text-xs text-slate-500 mt-1">Average score out of 100</p>
+                <p className="text-sm text-slate-500 mt-2">Average score out of 100</p>
                 <Progress 
                   value={leadScores.length > 0 
                     ? leadScores.reduce((sum, score) => sum + score.score, 0) / leadScores.length
                     : 0
                   } 
-                  className="mt-2" 
+                  className="mt-3" 
                 />
               </CardContent>
             </Card>
@@ -248,22 +248,22 @@ const AnalyticsPage = () => {
         </div>
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           {/* Quality Trends Chart */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                <CardTitle className="flex items-center space-x-3 text-lg">
+                  <TrendingUp className="h-6 w-6 text-blue-500" />
                   <span>Lead Quality Trends</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   <LineChart data={qualityTrends}>
                     <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                     <XAxis dataKey="date" />
@@ -296,21 +296,21 @@ const AnalyticsPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.6 }}
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Activity className="h-5 w-5 text-purple-500" />
+                <CardTitle className="flex items-center space-x-3 text-lg">
+                  <Activity className="h-6 w-6 text-purple-500" />
                   <span>Lead Status Distribution</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
                       data={statusData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={80}
+                      outerRadius={90}
                       fill="#8884d8"
                       dataKey="value"
                       label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
@@ -333,45 +333,46 @@ const AnalyticsPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7 }}
-            className="mb-8"
+            className="mb-10"
           >
-            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
+            <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
               <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Zap className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="flex items-center space-x-3 text-lg">
+                  <Zap className="h-6 w-6 text-yellow-500" />
                   <span>AI Insights & Recommendations</span>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {predictiveInsights.slice(0, 3).map((insight, index) => (
                     <motion.div
                       key={index}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 * index }}
-                      className="border rounded-lg p-4 bg-gradient-to-r from-blue-50 to-purple-50"
+                      className="border rounded-lg p-5 bg-gradient-to-r from-blue-50 to-purple-50"
                     >
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-slate-800">{insight.title}</h3>
-                        <div className="flex items-center space-x-2">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-semibold text-slate-800 text-lg">{insight.title}</h3>
+                        <div className="flex items-center space-x-3">
                           <Badge 
                             variant={insight.impact === 'high' ? 'destructive' : insight.impact === 'medium' ? 'default' : 'secondary'}
+                            className="text-sm"
                           >
                             {insight.impact} impact
                           </Badge>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="text-sm">
                             {insight.confidence}% confidence
                           </Badge>
                         </div>
                       </div>
-                      <p className="text-slate-600 mb-3">{insight.description}</p>
-                      <div className="space-y-1">
+                      <p className="text-slate-600 mb-4 text-base">{insight.description}</p>
+                      <div className="space-y-2">
                         <p className="text-sm font-medium text-slate-700">Recommended Actions:</p>
-                        <ul className="text-sm text-slate-600 space-y-1">
+                        <ul className="text-sm text-slate-600 space-y-2">
                           {insight.actionItems.map((action, actionIndex) => (
-                            <li key={actionIndex} className="flex items-center space-x-2">
-                              <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+                            <li key={actionIndex} className="flex items-center space-x-3">
+                              <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                               <span>{action}</span>
                             </li>
                           ))}
@@ -390,17 +391,17 @@ const AnalyticsPage = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="mb-8"
+          className="mb-10"
         >
-          <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-sm">
+          <Card className="bg-white/70 backdrop-blur-sm border-white/20 shadow-md">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Clock className="h-5 w-5 text-indigo-500" />
+              <CardTitle className="flex items-center space-x-3 text-lg">
+                <Clock className="h-6 w-6 text-indigo-500" />
                 <span>Hourly Response Patterns</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+              <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={responseTimePatterns}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis dataKey="hour" />
