@@ -123,12 +123,13 @@ export const useResponseTimeAnalytics = (userId: string | undefined) => {
       const receivedAt = new Date(lead.received_at);
       const responseTimeMinutes = Math.round((respondedAt.getTime() - receivedAt.getTime()) / (1000 * 60));
 
+      // Use a more flexible update approach to avoid type issues
       const { error } = await supabase
         .from('leads')
         .update({
           responded_at: respondedAt.toISOString(),
           response_time_minutes: responseTimeMinutes
-        })
+        } as any)
         .eq('id', leadId);
 
       if (error) {

@@ -55,6 +55,8 @@ interface Lead {
   received_at: string;
   status: string;
   is_archived?: boolean;
+  responded_at?: string | null;
+  response_time_minutes?: number | null;
 }
 
 const LeadsPage = () => {
