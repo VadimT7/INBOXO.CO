@@ -45,6 +45,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { AIResponseGenerator } from '@/components/AIResponseGenerator';
 
 interface Lead {
   id: string;
@@ -71,6 +72,7 @@ const LeadsPage = () => {
   const [notes, setNotes] = useState('');
   const [showArchived, setShowArchived] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
+  const [showAIResponse, setShowAIResponse] = useState(false);
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -283,7 +285,7 @@ const LeadsPage = () => {
     window.open(gmailUrl, '_blank');
   };
 
-  const handleReplyToLead = async (lead: Lead) => {
+  const handleReplyToLead = async (lead: Lead, message?: string) => {
     // Mark as responded when user clicks reply
     if (markLeadAsResponded) {
       const success = await markLeadAsResponded(lead.id);
@@ -292,8 +294,17 @@ const LeadsPage = () => {
       }
     }
     
-    // Open email client
-    window.location.href = `mailto:${lead.sender_email}?subject=Re: ${lead.subject}`;
+    // Open email client with optional pre-filled message
+    const subject = `Re: ${lead.subject}`;
+    let mailtoUrl = `mailto:${lead.sender_email}?subject=${encodeURIComponent(subject)}`;
+    
+    if (message) {
+      // Clean up the message for email body
+      const cleanMessage = message.replace(/\n/g, '%0D%0A');
+      mailtoUrl += `&body=${encodeURIComponent(message)}`;
+    }
+    
+    window.location.href = mailtoUrl;
   };
 
   useEffect(() => {
@@ -306,9 +317,10 @@ const LeadsPage = () => {
   }, [authLoading, user?.id]);
 
   useEffect(() => {
-    // Reset showFullContent when modal opens/closes or lead changes
+    // Reset showFullContent and showAIResponse when modal opens/closes or lead changes
     if (!showDetailsModal || !selectedLead) {
       setShowFullContent(false);
+      setShowAIResponse(false);
     }
   }, [showDetailsModal, selectedLead?.id]);
 
@@ -523,8 +535,8 @@ const LeadsPage = () => {
 
         {/* Lead Details Modal */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle className="flex items-center justify-between">
                 <span>Lead Details</span>
                 <Badge variant={
@@ -539,7 +551,7 @@ const LeadsPage = () => {
             </DialogHeader>
             
             {selectedLead && (
-              <div className="space-y-4">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
                 <div>
                   <h3 className="text-sm font-medium text-slate-600 mb-1">From</h3>
                   <div className="flex items-center justify-between">
@@ -622,6 +634,17 @@ const LeadsPage = () => {
                   />
                 </div>
 
+                {/* AI Response Generator */}
+                <div className="border-t pt-4">
+                  <AIResponseGenerator
+                    lead={selectedLead}
+                    onUseResponse={(response) => {
+                      handleReplyToLead(selectedLead, response);
+                      setShowDetailsModal(false);
+                    }}
+                  />
+                </div>
+
                 <div className="flex justify-between pt-4 border-t">
                   <div className="flex gap-2">
                     {selectedLead.is_archived ? (
@@ -658,10 +681,13 @@ const LeadsPage = () => {
                   
                   <Button
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    onClick={() => handleReplyToLead(selectedLead)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReplyToLead(selectedLead);
+                    }}
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Reply
+                    Reply With My Response
                   </Button>
                 </div>
               </div>
