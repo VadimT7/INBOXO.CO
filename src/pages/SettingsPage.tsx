@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { 
+import {
   User, Mail, Shield, Bell, Settings, Zap, Crown, Download, Upload,
   Eye, EyeOff, Key, Trash2, RefreshCw, Save, AlertTriangle, CheckCircle,
   Smartphone, Globe, Clock, Bot, Users, CreditCard, Database, Webhook,
@@ -33,10 +33,10 @@ import {
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { deleteAccount } from '@/lib/stripe';
-import { 
-  createCheckoutSession, 
-  fetchBillingHistory, 
-  cancelSubscription, 
+import {
+  createCheckoutSession,
+  fetchBillingHistory,
+  cancelSubscription,
   createPortalSession,
   fetchPaymentMethods,
   fetchUsageData,
@@ -298,7 +298,7 @@ const SettingsPage = () => {
       if (error) {
         throw error;
       }
-      
+
       toast.success('Settings saved successfully');
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -325,7 +325,7 @@ const SettingsPage = () => {
 
   const addKeyword = (type: 'hot' | 'warm' | 'cold', keyword: string) => {
     if (!keyword.trim() || !settings) return;
-    
+
     const currentKeywords = settings.leadClassification[`${type}Keywords`];
     if (!currentKeywords.includes(keyword.toLowerCase())) {
       updateSettings(`leadClassification.${type}Keywords`, [...currentKeywords, keyword.toLowerCase()]);
@@ -334,7 +334,7 @@ const SettingsPage = () => {
 
   const removeKeyword = (type: 'hot' | 'warm' | 'cold', keyword: string) => {
     if (!settings) return;
-    
+
     const currentKeywords = settings.leadClassification[`${type}Keywords`];
     updateSettings(`leadClassification.${type}Keywords`, currentKeywords.filter(k => k !== keyword));
   };
@@ -373,7 +373,7 @@ const SettingsPage = () => {
     try {
       await deleteAccount();
       toast.success('Account deleted successfully. You will be signed out.');
-      
+
       // Sign out the user
       await supabase.auth.signOut();
       navigate('/auth');
@@ -399,13 +399,13 @@ const SettingsPage = () => {
           .select('subscription_status, subscription_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, subscription_created_at')
           .eq('id', user?.id)
           .single(),
-        
+
         // Load billing history
         fetchBillingHistory(),
-        
+
         // Load real usage data
         fetchUsageData(),
-        
+
         // Load payment methods and subscription details
         fetchPaymentMethods()
       ]);
@@ -619,7 +619,7 @@ const SettingsPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-24 p-6 sm:p-10 lg:p-16 text-[1.08rem] md:text-base">
       <div className="max-w-[95vw] mx-auto mt-16">
         {/* Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
@@ -632,8 +632,8 @@ const SettingsPage = () => {
               <p className="text-slate-600 mt-2">Manage your account and application preferences</p>
             </div>
             <div className="mt-4 sm:mt-0">
-              <Button 
-                onClick={saveSettings} 
+              <Button
+                onClick={saveSettings}
                 disabled={saving}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
@@ -654,7 +654,7 @@ const SettingsPage = () => {
         </motion.div>
 
         {/* Settings Tabs */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -964,8 +964,8 @@ const SettingsPage = () => {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="dataRetention">Data Retention (days)</Label>
-                    <Select 
-                      value={settings.privacy.dataRetention.toString()} 
+                    <Select
+                      value={settings.privacy.dataRetention.toString()}
                       onValueChange={(value) => updateSettings('privacy.dataRetention', parseInt(value))}
                     >
                       <SelectTrigger className="mt-1">
@@ -1063,20 +1063,20 @@ const SettingsPage = () => {
                       </div>
 
                       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Button 
+                        <Button
                           className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                           disabled={upgradeLoading}
                           onClick={() => {
                             // Scroll to the plans section
-                            document.getElementById('available-plans')?.scrollIntoView({ 
-                              behavior: 'smooth' 
+                            document.getElementById('available-plans')?.scrollIntoView({
+                              behavior: 'smooth'
                             });
                           }}
                         >
                           <ArrowUpCircle className="h-4 w-4 mr-2" />
                           {upgradeLoading ? 'Processing...' : 'Upgrade Plan'}
                         </Button>
-                        
+
                         {subscriptionData?.subscription_status === 'active' && (
                           <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
                             <DialogTrigger asChild>
@@ -1118,8 +1118,8 @@ const SettingsPage = () => {
                               <BarChart3 className="h-5 w-5 mr-2" />
                               Usage & Limits
                             </div>
-                            <Button 
-                              variant="ghost" 
+                            <Button
+                              variant="ghost"
                               size="sm"
                               onClick={loadBillingData}
                             >
@@ -1255,11 +1255,10 @@ const SettingsPage = () => {
                           {plans.map((plan) => (
                             <div
                               key={plan.name}
-                              className={`p-4 border rounded-lg transition-all ${
-                                plan.name === getCurrentPlan().name
-                                  ? 'border-blue-500 bg-blue-50'
-                                  : 'border-slate-200 hover:border-slate-300'
-                              }`}
+                              className={`p-4 border rounded-lg transition-all ${plan.name === getCurrentPlan().name
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-slate-200 hover:border-slate-300'
+                                }`}
                             >
                               <div className="flex items-center justify-between mb-2">
                                 <h3 className="font-semibold">{plan.name}</h3>
@@ -1269,7 +1268,7 @@ const SettingsPage = () => {
                               </div>
                               <p className="text-2xl font-bold mb-1">${plan.price}</p>
                               <p className="text-sm text-slate-600 mb-3">{plan.description}</p>
-                              
+
                               <ul className="space-y-1 mb-4">
                                 {plan.features.slice(0, 3).map((feature, index) => (
                                   <li key={index} className="flex items-center text-sm">
@@ -1323,8 +1322,8 @@ const SettingsPage = () => {
                                   </div>
                                 </div>
                               ))}
-                              <Button 
-                                variant="outline" 
+                              <Button
+                                variant="outline"
                                 className="w-full"
                                 onClick={handleManagePaymentMethod}
                               >
@@ -1335,7 +1334,7 @@ const SettingsPage = () => {
                             <div className="text-center py-6">
                               <CreditCard className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                               <p className="text-slate-500 mb-4">No payment method on file</p>
-                              <Button 
+                              <Button
                                 variant="outline"
                                 onClick={handleManagePaymentMethod}
                               >
@@ -1390,6 +1389,7 @@ const SettingsPage = () => {
 
             {/* Advanced */}
             <TabsContent value="advanced" className="space-y-6">
+              {/* 
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center">
@@ -1429,7 +1429,7 @@ const SettingsPage = () => {
                   </Alert>
                 </CardContent>
               </Card>
-
+              */}
 
 
               <Card className="border-red-200">
@@ -1511,8 +1511,8 @@ const SettingsPage = () => {
                         />
                       </div>
                       <DialogFooter>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           onClick={() => {
                             setFinalDeleteConfirmOpen(false);
                             setDeleteInput('');
@@ -1521,8 +1521,8 @@ const SettingsPage = () => {
                         >
                           Cancel
                         </Button>
-                        <Button 
-                          variant="destructive" 
+                        <Button
+                          variant="destructive"
                           onClick={handleFinalDeleteAccount}
                           disabled={deleteInput !== 'DELETE MY ACCOUNT' || isDeleting}
                         >
