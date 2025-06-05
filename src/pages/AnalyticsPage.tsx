@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,9 +54,9 @@ const AnalyticsPage = () => {
   } = useAdvancedAnalytics(leads, user?.id);
 
   const { 
-    metrics: responseMetrics, 
+    stats: responseMetrics, 
     loading: responseLoading 
-  } = useResponseTimeAnalytics(user?.id);
+  } = useResponseTimeAnalytics();
 
   const fetchLeads = async () => {
     if (!user) {
@@ -200,17 +199,17 @@ const AnalyticsPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  {responseLoading ? '...' : responseMetrics.averageResponseTimeFormatted}
+                  {responseLoading ? '...' : `${responseMetrics.averageTime}m`}
                 </div>
                 <p className="text-sm text-slate-500 mt-2">
-                  {responseMetrics.totalResponded > 0 
+                  {responseMetrics.totalResponses > 0 
                     ? `${responseMetrics.responseRate}% response rate`
                     : 'No responses tracked yet'
                   }
                 </p>
                 <div className="flex items-center mt-3">
                   <Badge variant="outline" className="text-sm">
-                    {responseMetrics.withinBusinessHours ? 'Within business hours' : 'After hours'}
+                    {responseMetrics.totalResponses} responses tracked
                   </Badge>
                 </div>
               </CardContent>

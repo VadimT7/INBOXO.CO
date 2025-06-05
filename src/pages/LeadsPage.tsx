@@ -69,7 +69,7 @@ interface Lead {
 const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
-  const { markLeadAsResponded } = useResponseTimeAnalytics(user?.id);
+  const { markLeadAsResponded } = useResponseTimeAnalytics();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
