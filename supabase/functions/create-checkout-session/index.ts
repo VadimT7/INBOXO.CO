@@ -28,21 +28,18 @@ serve(async (req) => {
     // Create a Supabase client
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: authHeader },
-        },
-      }
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Get the user
+    // Get the user by extracting the token properly
+    const token = authHeader.replace('Bearer ', '')
     const {
       data: { user },
       error: userError,
-    } = await supabaseClient.auth.getUser()
+    } = await supabaseClient.auth.getUser(token)
 
     if (userError || !user) {
+      console.error('User verification failed:', userError)
       throw new Error('Unauthorized')
     }
 
@@ -65,7 +62,7 @@ serve(async (req) => {
       mode: 'subscription',
       success_url: `${req.headers.get('origin')}/leads?subscription=success`,
       cancel_url: `${req.headers.get('origin')}/subscription`,
-      automatic_tax: { enabled: true },
+      automatic_tax: { enabled: false },
       customer_email: user.email,
       metadata: {
         userId: user.id,

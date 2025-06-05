@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { deleteAccount } from '@/lib/stripe';
 
 interface UserSettings {
   id: string;
@@ -84,6 +85,9 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [finalDeleteConfirmOpen, setFinalDeleteConfirmOpen] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -247,13 +251,32 @@ const SettingsPage = () => {
     }
   };
 
-  const deleteAccount = async () => {
+  const handleDeleteAccountConfirm = () => {
+    setDeleteConfirmOpen(false);
+    setFinalDeleteConfirmOpen(true);
+  };
+
+  const handleFinalDeleteAccount = async () => {
+    if (deleteInput !== 'DELETE MY ACCOUNT') {
+      toast.error('Please type "DELETE MY ACCOUNT" to confirm');
+      return;
+    }
+
+    setIsDeleting(true);
     try {
-      // In a real app, this would delete the user account
-      toast.success('Account deletion initiated. You will receive a confirmation email.');
-      setDeleteConfirmOpen(false);
-    } catch (error) {
-      toast.error('Failed to delete account');
+      await deleteAccount();
+      toast.success('Account deleted successfully. You will be signed out.');
+      
+      // Sign out the user
+      await supabase.auth.signOut();
+      navigate('/auth');
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      toast.error(error.message || 'Failed to delete account');
+    } finally {
+      setIsDeleting(false);
+      setFinalDeleteConfirmOpen(false);
+      setDeleteInput('');
     }
   };
 
@@ -776,6 +799,7 @@ const SettingsPage = () => {
                     </AlertDescription>
                   </Alert>
 
+                  {/* First confirmation dialog */}
                   <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
                     <DialogTrigger asChild>
                       <Button variant="destructive">
@@ -785,18 +809,86 @@ const SettingsPage = () => {
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Are you absolutely sure?</DialogTitle>
-                        <DialogDescription>
-                          This action cannot be undone. This will permanently delete your account
-                          and remove all your data from our servers.
+                        <DialogTitle className="text-red-600">⚠️ Delete Account Warning</DialogTitle>
+                        <DialogDescription className="space-y-3">
+                          <p className="font-medium">
+                            This action will permanently delete your account and ALL associated data:
+                          </p>
+                          <ul className="list-disc pl-6 space-y-1 text-sm">
+                            <li>All your leads and customer data</li>
+                            <li>Your subscription and billing information</li>
+                            <li>Gmail integration settings</li>
+                            <li>Usage statistics and history</li>
+                            <li>Account settings and preferences</li>
+                          </ul>
+                          <p className="font-medium text-red-600">
+                            This action cannot be undone and your data cannot be recovered.
+                          </p>
                         </DialogDescription>
                       </DialogHeader>
                       <DialogFooter>
                         <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
                           Cancel
                         </Button>
-                        <Button variant="destructive" onClick={deleteAccount}>
-                          Yes, delete my account
+                        <Button variant="destructive" onClick={handleDeleteAccountConfirm}>
+                          Continue with Deletion
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+
+                  {/* Final confirmation dialog */}
+                  <Dialog open={finalDeleteConfirmOpen} onOpenChange={setFinalDeleteConfirmOpen}>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="text-red-600">🚨 Final Confirmation Required</DialogTitle>
+                        <DialogDescription className="space-y-4">
+                          <p className="font-medium">
+                            You are about to permanently delete your InboxFlow account.
+                          </p>
+                          <p className="text-sm text-slate-600">
+                            To confirm this action, please type the following phrase exactly:
+                          </p>
+                          <p className="font-mono font-bold text-center bg-slate-100 p-2 rounded">
+                            DELETE MY ACCOUNT
+                          </p>
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="py-4">
+                        <Input
+                          value={deleteInput}
+                          onChange={(e) => setDeleteInput(e.target.value)}
+                          placeholder="Type confirmation phrase here..."
+                          className="text-center font-mono"
+                        />
+                      </div>
+                      <DialogFooter>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setFinalDeleteConfirmOpen(false);
+                            setDeleteInput('');
+                          }}
+                          disabled={isDeleting}
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          variant="destructive" 
+                          onClick={handleFinalDeleteAccount}
+                          disabled={deleteInput !== 'DELETE MY ACCOUNT' || isDeleting}
+                        >
+                          {isDeleting ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Deleting Account...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Permanently Delete Account
+                            </>
+                          )}
                         </Button>
                       </DialogFooter>
                     </DialogContent>

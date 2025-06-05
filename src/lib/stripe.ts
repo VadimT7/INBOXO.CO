@@ -49,6 +49,11 @@ export const createCheckoutSession = async (priceId: string) => {
       throw new Error('Not authenticated');
     }
 
+    console.log('Creating checkout session for priceId:', priceId);
+    console.log('Session:', session);
+    console.log('Session data:', session.data);
+    console.log('Session access token:', session.data.session?.access_token);
+
     // Use correct Supabase project URL
     const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/create-checkout-session', {
       method: 'POST',
@@ -235,6 +240,32 @@ export const createPortalSession = async () => {
     window.location.href = url;
   } catch (err) {
     console.error('Error creating portal session:', err);
+    throw err;
+  }
+};
+
+export const deleteAccount = async () => {
+  try {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/delete-account', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to delete account');
+    }
+
+    return await response.json();
+  } catch (err) {
+    console.error('Error deleting account:', err);
     throw err;
   }
 };
