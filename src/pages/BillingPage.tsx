@@ -167,7 +167,14 @@ const BillingPage = () => {
           console.error('Error fetching subscription data:', profileError);
           setSubscriptionData({ subscription_status: 'free' });
         } else if (profileData) {
-          setSubscriptionData(profileData);
+          setSubscriptionData({
+            subscription_status: profileData.subscription_status || 'free',
+            subscription_plan: profileData.subscription_plan,
+            stripe_customer_id: profileData.stripe_customer_id,
+            stripe_subscription_id: profileData.stripe_subscription_id,
+            trial_ends_at: profileData.trial_ends_at,
+            subscription_created_at: profileData.subscription_created_at
+          });
         } else {
           setSubscriptionData({ subscription_status: 'free' });
         }

@@ -34,7 +34,7 @@ export function useSubscription(): UseSubscriptionReturn {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('subscription_status, subscription_plan, stripe_customer_id, stripe_subscription_id, trial_ends_at, subscription_created_at')
+        .select('*')
         .eq('id', user.id)
         .single();
 
@@ -46,7 +46,6 @@ export function useSubscription(): UseSubscriptionReturn {
             .from('profiles')
             .upsert({
               id: user.id,
-              subscription_status: 'free',
               updated_at: new Date().toISOString()
             });
           
@@ -62,7 +61,14 @@ export function useSubscription(): UseSubscriptionReturn {
       }
 
       if (data) {
-        setSubscriptionData(data);
+        setSubscriptionData({
+          subscription_status: data.subscription_status || 'free',
+          subscription_plan: data.subscription_plan,
+          stripe_customer_id: data.stripe_customer_id,
+          stripe_subscription_id: data.stripe_subscription_id,
+          trial_ends_at: data.trial_ends_at,
+          subscription_created_at: data.subscription_created_at
+        });
       } else {
         setSubscriptionData({ subscription_status: 'free' });
       }
