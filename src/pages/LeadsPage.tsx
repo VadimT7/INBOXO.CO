@@ -32,18 +32,21 @@ import { cn } from '@/lib/utils';
 import {
   DndContext,
   DragEndEvent,
+  DragOverEvent,
   DragOverlay,
   DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
-  closestCenter,
+  closestCorners,
   useDroppable,
+  rectIntersection,
 } from '@dnd-kit/core';
 import {
   SortableContext,
   verticalListSortingStrategy,
   useSortable,
+  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AIResponseGenerator } from '@/components/AIResponseGenerator';
@@ -60,6 +63,7 @@ interface Lead {
   responded_at?: string | null;
   response_time_minutes?: number | null;
   answered?: boolean;
+  sort_order?: number;
 }
 
 const LeadsPage = () => {
@@ -82,12 +86,12 @@ const LeadsPage = () => {
 
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        // Use delay to require holding for 250ms before dragging starts
         delay: 100,
-        // Also keep a small distance threshold to avoid accidental drags
         tolerance: 5,
       },
     })
@@ -97,43 +101,76 @@ const LeadsPage = () => {
     setActiveId(event.active.id as string);
   };
 
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    setOverId(over.id as string);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
+    setOverId(null);
     
-    // If not dropped over a valid droppable area or the over.id is not a valid status
-    if (!over) {
-      // Just reset the active ID and return - lead stays in original position
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    
+    // Find the active lead
+    const activeLead = leads.find(lead => lead.id === activeId);
+    if (!activeLead) return;
+
+    // Check if over is a column
+    const validStatuses = ['unclassified', 'hot', 'warm', 'cold'];
+    
+    // If dropping on a column header
+    if (validStatuses.includes(overId)) {
+      if (activeLead.status !== overId) {
+        updateLeadStatus(activeId, overId);
+        
+        // Show success message
+        const statusEmojis = {
+          hot: '🔥',
+          warm: '🌤️', 
+          cold: '❄️',
+          unclassified: '📋'
+        };
+        const emoji = statusEmojis[overId as keyof typeof statusEmojis] || '✅';
+        toast.success(`${emoji} Lead moved to ${overId}!`, {
+          duration: 2000,
+        });
+      }
       return;
     }
 
-    const leadId = active.id as string;
-    const newStatus = over.id as string;
-    
-    // Validate that the over.id is a valid status category
-    const validStatuses = ['unclassified', 'hot', 'warm', 'cold'];
-    if (!validStatuses.includes(newStatus)) {
-      // Not a valid status category, ignore the drop
-      return;
-    }
-    
-    // Find the lead being dragged
-    const lead = leads.find(l => l.id === leadId);
-    
-    if (lead && lead.status !== newStatus) {
-      updateLeadStatus(leadId, newStatus);
+    // If dropping on another lead, we need to handle reordering
+    const overLead = leads.find(lead => lead.id === overId);
+    if (!overLead) return;
+
+    // If leads are in different columns, move to new column
+    if (activeLead.status !== overLead.status) {
+      updateLeadStatus(activeId, overLead.status);
       
-      // Show success message with animation
       const statusEmojis = {
         hot: '🔥',
         warm: '🌤️', 
         cold: '❄️',
         unclassified: '📋'
       };
-      const emoji = statusEmojis[newStatus as keyof typeof statusEmojis] || '✅';
-      toast.success(`${emoji} Lead moved to ${newStatus}!`, {
+      const emoji = statusEmojis[overLead.status as keyof typeof statusEmojis] || '✅';
+      toast.success(`${emoji} Lead moved to ${overLead.status}!`, {
         duration: 2000,
       });
+    } else {
+      // Same column - just reorder
+      const activeIndex = leads.findIndex(lead => lead.id === activeId);
+      const overIndex = leads.findIndex(lead => lead.id === overId);
+      
+      if (activeIndex !== overIndex) {
+        setLeads(prev => arrayMove(prev, activeIndex, overIndex));
+      }
     }
   };
 
@@ -179,7 +216,7 @@ const LeadsPage = () => {
         return;
       }
 
-      // Update local state with animation
+      // Update local state
       setLeads(prev => prev.map(lead => 
         lead.id === leadId ? { ...lead, status: newStatus } : lead
       ));
@@ -586,8 +623,9 @@ const LeadsPage = () => {
         {/* Kanban Board */}
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={rectIntersection}
           onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
           onDragEnd={handleDragEnd}
         >
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -635,6 +673,7 @@ const LeadsPage = () => {
                   setSelectedLead(lead);
                   setShowDetailsModal(true);
                 }}
+                overId={overId}
               />
             ))}
           </div>
@@ -1046,12 +1085,12 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       className={cn(
-        "group select-none", // Add select-none to prevent text selection
+        "group select-none",
         isDragging && "opacity-50",
-        isBeingDragged && "pointer-events-none" // Disable pointer events on child elements during drag
+        isBeingDragged && "pointer-events-none"
       )}
       style={{
-        userSelect: 'none', // Prevent text selection
+        userSelect: 'none',
         WebkitUserSelect: 'none',
       }}
     >
@@ -1256,12 +1295,12 @@ interface DroppableColumnProps {
   index: number;
   onStatusChange: (leadId: string, newStatus: string) => void;
   onSelectLead: (lead: Lead) => void;
+  overId?: string | null;
 }
 
-const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }: DroppableColumnProps) => {
+const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead, overId }: DroppableColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.key,
-    // Make the entire column a valid drop target
     data: {
       accepts: 'lead',
       status: column.key
@@ -1276,15 +1315,15 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
       className={cn(
-        "flex flex-col h-full rounded-xl transition-all", // Use flex column, full height
-        isOver && "bg-blue-100/50 ring-2 ring-blue-400" // Visual feedback for the entire column
+        "flex flex-col h-full rounded-xl transition-all min-h-[600px]",
+        (isOver || overId === column.key) && "bg-blue-100/50 ring-2 ring-blue-400"
       )}
-      ref={setNodeRef} // The entire column is the drop target
+      ref={setNodeRef}
     >
-      {/* Column Header (does not grow) */}
+      {/* Column Header */}
       <div className={cn(
-        "bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm",
-        isOver && "ring-2 ring-blue-300 shadow-md" // Enhanced header highlight
+        "bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm flex-shrink-0",
+        (isOver || overId === column.key) && "ring-2 ring-blue-300 shadow-md"
       )}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -1314,11 +1353,11 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
         </div>
       </div>
 
-      {/* Lead Cards (grows to fill remaining space) */}
+      {/* Lead Cards Area - This is the main droppable area */}
       <div 
         className={cn(
-          "flex-grow space-y-3 min-h-[200px] p-3 rounded-b-xl transition-all", // flex-grow, adjusted padding and rounding
-          isOver && "bg-blue-200/30" // Subtle background for card area when column isOver
+          "flex-grow space-y-3 p-3 rounded-b-xl transition-all",
+          (isOver || overId === column.key) && "bg-blue-200/30"
         )}
       >
         <SortableContext items={leads.map(lead => lead.id)} strategy={verticalListSortingStrategy}>
@@ -1350,6 +1389,7 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead }:
           >
             <column.icon className="h-12 w-12 mx-auto mb-3 opacity-30" />
             <p className="text-sm">No {column.title.toLowerCase()} yet</p>
+            <p className="text-xs mt-2">Drop leads here to categorize them</p>
           </motion.div>
         )}
       </div>
