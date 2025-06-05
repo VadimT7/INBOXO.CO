@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthSession } from './useAuthSession';
@@ -52,14 +53,22 @@ export function useSubscription(): UseSubscriptionReturn {
           if (!createError) {
             setSubscriptionData({ subscription_status: 'free' });
           }
+        } else {
+          // Set default subscription data on other errors
+          setSubscriptionData({ subscription_status: 'free' });
         }
         setLoading(false);
         return;
       }
 
-      setSubscriptionData(data);
+      if (data) {
+        setSubscriptionData(data);
+      } else {
+        setSubscriptionData({ subscription_status: 'free' });
+      }
     } catch (error) {
       console.error('Error fetching subscription data:', error);
+      setSubscriptionData({ subscription_status: 'free' });
     } finally {
       setLoading(false);
     }
@@ -103,4 +112,4 @@ export function useSubscription(): UseSubscriptionReturn {
     needsSubscription,
     refreshSubscription
   };
-} 
+}

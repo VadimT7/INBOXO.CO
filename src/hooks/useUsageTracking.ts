@@ -1,93 +1,99 @@
-import { useCallback } from 'react';
+
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthSession } from './useAuthSession';
 
-export type UsageAction = 
-  | 'lead_processed'
-  | 'api_call_made'
-  | 'ai_response_generated'
-  | 'email_sent'
-  | 'storage_used';
-
-interface UsageTrackingOptions {
-  leadDelta?: number;
-  apiCallDelta?: number;
-  aiResponseDelta?: number;
-  emailDelta?: number;
-  storageMbDelta?: number;
+interface UsageData {
+  leads_processed: number;
+  api_calls_made: number;
+  storage_used_mb: number;
+  ai_responses_generated: number;
+  emails_sent: number;
 }
 
-export const useUsageTracking = () => {
+export function useUsageTracking() {
   const { user } = useAuthSession();
+  const [usage, setUsage] = useState<UsageData>({
+    leads_processed: 0,
+    api_calls_made: 0,
+    storage_used_mb: 0,
+    ai_responses_generated: 0,
+    emails_sent: 0
+  });
+  const [loading, setLoading] = useState(true);
 
-  const trackUsage = useCallback(async (
-    action: UsageAction,
-    options: UsageTrackingOptions = {}
-  ) => {
-    if (!user?.id) {
-      console.warn('Cannot track usage: user not authenticated');
-      return;
+  useEffect(() => {
+    if (user) {
+      fetchUsage();
     }
+  }, [user]);
+
+  const fetchUsage = async () => {
+    if (!user) return;
 
     try {
-      // Default values based on action type
-      const {
-        leadDelta = action === 'lead_processed' ? 1 : 0,
-        apiCallDelta = action === 'api_call_made' ? 1 : 0,
-        aiResponseDelta = action === 'ai_response_generated' ? 1 : 0,
-        emailDelta = action === 'email_sent' ? 1 : 0,
-        storageMbDelta = action === 'storage_used' ? 1 : 0,
-      } = options;
+      const currentMonth = new Date().toISOString().slice(0, 7) + '-01';
+      
+      const { data, error } = await supabase
+        .from('user_usage')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('period_month', currentMonth)
+        .single();
 
-      // Call the database function to update usage
-      const { error } = await supabase.rpc('upsert_current_month_usage', {
-        p_user_id: user.id,
-        p_leads_delta: leadDelta,
-        p_api_calls_delta: apiCallDelta,
-        p_ai_responses_delta: aiResponseDelta,
-        p_emails_delta: emailDelta,
-        p_storage_mb_delta: storageMbDelta,
-      });
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching usage:', error);
+        return;
+      }
 
-      if (error) {
-        console.error('Error tracking usage:', error);
+      if (data) {
+        setUsage({
+          leads_processed: data.leads_processed || 0,
+          api_calls_made: data.api_calls_made || 0,
+          storage_used_mb: data.storage_used_mb || 0,
+          ai_responses_generated: data.ai_responses_generated || 0,
+          emails_sent: data.emails_sent || 0
+        });
       }
     } catch (error) {
-      console.error('Failed to track usage:', error);
+      console.error('Error fetching usage data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [user?.id]);
+  };
 
-  const trackLeadProcessed = useCallback(() => {
-    return trackUsage('lead_processed');
-  }, [trackUsage]);
+  const incrementUsage = async (type: keyof UsageData, amount: number = 1) => {
+    if (!user) return;
 
-  const trackApiCall = useCallback(() => {
-    return trackUsage('api_call_made');
-  }, [trackUsage]);
+    try {
+      const result = await supabase.rpc('upsert_current_month_usage', {
+        p_user_id: user.id,
+        p_leads_delta: type === 'leads_processed' ? amount : 0,
+        p_api_calls_delta: type === 'api_calls_made' ? amount : 0,
+        p_storage_mb_delta: type === 'storage_used_mb' ? amount : 0,
+        p_ai_responses_delta: type === 'ai_responses_generated' ? amount : 0,
+        p_emails_delta: type === 'emails_sent' ? amount : 0
+      });
 
-  const trackAiResponse = useCallback(() => {
-    return trackUsage('ai_response_generated');
-  }, [trackUsage]);
+      if (result.error) {
+        console.error('Error updating usage:', result.error);
+        return;
+      }
 
-  const trackEmailSent = useCallback(() => {
-    return trackUsage('email_sent');
-  }, [trackUsage]);
-
-  const trackStorageUsed = useCallback((mbUsed: number) => {
-    return trackUsage('storage_used', { storageMbDelta: mbUsed });
-  }, [trackUsage]);
-
-  const trackBulkUsage = useCallback((options: UsageTrackingOptions) => {
-    return trackUsage('api_call_made', options); // Use any action as base
-  }, [trackUsage]);
+      // Update local state
+      setUsage(prev => ({
+        ...prev,
+        [type]: prev[type] + amount
+      }));
+    } catch (error) {
+      console.error('Error incrementing usage:', error);
+    }
+  };
 
   return {
-    trackUsage,
-    trackLeadProcessed,
-    trackApiCall,
-    trackAiResponse,
-    trackEmailSent,
-    trackStorageUsed,
-    trackBulkUsage,
+    usage,
+    loading,
+    incrementUsage,
+    refetch: fetchUsage
   };
-}; 
+}
