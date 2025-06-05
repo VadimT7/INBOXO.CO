@@ -105,10 +105,36 @@ export function useResponseTimeAnalytics() {
     });
   };
 
+  const markLeadAsResponded = async (leadId: string) => {
+    try {
+      const responseTime = Math.floor(Math.random() * 60) + 1; // Random response time for demo
+      
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          response_time_minutes: responseTime,
+          responded_at: new Date().toISOString()
+        })
+        .eq('id', leadId)
+        .eq('user_id', user?.id);
+
+      if (error) {
+        console.error('Error marking lead as responded:', error);
+        return;
+      }
+
+      // Refresh data
+      await fetchLeads();
+    } catch (error) {
+      console.error('Error marking lead as responded:', error);
+    }
+  };
+
   return {
     leads,
     stats,
     loading,
-    refetch: fetchLeads
+    refetch: fetchLeads,
+    markLeadAsResponded
   };
 }
