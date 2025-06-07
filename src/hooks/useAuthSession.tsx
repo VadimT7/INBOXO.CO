@@ -146,10 +146,17 @@ export function useAuthSession(): AuthSession {
               sessionStorage.setItem('welcomeToastShown', 'true');
             }
             
-            // Only navigate to leads page on initial sign-in, not on page refreshes
+            // Only navigate on initial sign-in, not on page refreshes
             if (isInitialSignIn) {
               localStorage.setItem('userHasLoggedIn', 'true');
-              navigate('/leads');
+              
+              // Check if user has seen onboarding
+              const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+              if (!hasSeenOnboarding) {
+                navigate('/onboarding');
+              } else {
+                navigate('/leads');
+              }
             }
             
             // Always update profile with token to ensure Gmail sync works

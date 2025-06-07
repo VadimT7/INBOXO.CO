@@ -15,8 +15,8 @@ const SubscriptionGuard = ({ children }: SubscriptionGuardProps) => {
   useEffect(() => {
     if (authLoading || hasCheckedSubscription) return;
 
-    // Don't redirect if user is already on subscription, success, or auth pages
-    const exemptPaths = ['/subscription', '/success', '/login'];
+    // Don't redirect if user is already on subscription, success, auth, or onboarding pages
+    const exemptPaths = ['/subscription', '/success', '/login', '/onboarding'];
     if (exemptPaths.includes(location.pathname)) {
       setHasCheckedSubscription(true);
       return;

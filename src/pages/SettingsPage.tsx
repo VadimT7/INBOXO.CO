@@ -402,6 +402,11 @@ const SettingsPage = () => {
       await deleteAccount();
       toast.success('Account deleted successfully. You will be signed out.');
 
+      // Clear onboarding and subscription localStorage keys
+      localStorage.removeItem('hasSeenOnboarding');
+      localStorage.removeItem('userHasLoggedIn');
+      localStorage.removeItem('subscriptionPageSeen');
+
       // Sign out the user
       await supabase.auth.signOut();
       navigate('/auth');

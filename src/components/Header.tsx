@@ -23,6 +23,9 @@ const Header = () => {
 
   // Check if we're on a dashboard page (leads, analytics, settings, revenue)
   const isDashboardPage = session && ['/leads', '/analytics', '/settings', '/revenue'].includes(location.pathname);
+  
+  // Check if user just completed onboarding
+  const isOnboardingPage = location.pathname === '/onboarding';
 
   const handleSignOut = async () => {
     setShowSignOutDialog(false);
@@ -45,6 +48,8 @@ const Header = () => {
               "absolute inset-0 backdrop-blur-md",
               isDashboardPage 
                 ? "bg-gradient-to-r from-blue-600 to-blue-700" 
+                : isOnboardingPage
+                ? "bg-gradient-to-r from-purple-600 to-blue-600"
                 : "bg-slate-900/75"
             )}></div>
 

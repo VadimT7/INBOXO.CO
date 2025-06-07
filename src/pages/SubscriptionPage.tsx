@@ -250,10 +250,13 @@ const SubscriptionPage = () => {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-4xl sm:text-5xl font-bold mb-6">
-              Welcome to InboxFlow! 🎉
+              {localStorage.getItem('hasSeenOnboarding') ? 'Ready to unlock AI for all your leads?' : 'Welcome to InboxFlow!'} 🎉
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
-              Choose your plan to start your 14-day free trial and unlock the full power of automated lead management.
+              {localStorage.getItem('hasSeenOnboarding') 
+                ? 'You just saw the magic! Choose your plan to get AI responses for every lead.'
+                : 'Choose your plan to start your 14-day free trial and unlock the full power of automated lead management.'
+              }
             </p>
             <div className="bg-blue-700/30 backdrop-blur-sm rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-blue-100">

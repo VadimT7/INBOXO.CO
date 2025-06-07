@@ -13,7 +13,7 @@ const plans = [
   {
     name: "Starter",
     price: "49",
-    priceId: "prod_SOyB4bsEGx80b2",
+    priceId: "price_1RUAFAR4VctRXueqTXYvL5w8",
     description: "Perfect for small teams and startups",
     features: [
       "Up to 1,000 leads per month",
@@ -28,7 +28,7 @@ const plans = [
   {
     name: "Professional",
     price: "99",
-    priceId: "prod_SOyBreKNsjPxf1",
+    priceId: "price_1RUAFPR4VctRXueqhOyOSFnq",
     description: "For growing businesses",
     features: [
       "Up to 10,000 leads per month",
@@ -45,7 +45,7 @@ const plans = [
   {
     name: "Enterprise",
     price: "299",
-    priceId: "prod_SOyEW0RCVxXjb4",
+    priceId: "price_1RUAHbR4VctRXueqklf7r7hi",
     description: "For large organizations",
     features: [
       "Unlimited leads",

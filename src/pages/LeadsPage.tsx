@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useConfetti } from '@/hooks/useConfetti';
 import {
   DndContext,
   DragEndEvent,
@@ -70,6 +71,7 @@ const LeadsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const { markLeadAsResponded } = useResponseTimeAnalytics();
+  const { triggerSuccess } = useConfetti();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -307,9 +309,10 @@ const LeadsPage = () => {
 
   const toggleAnsweredStatus = async (leadId: string, answered: boolean) => {
     try {
-      // Trigger animation only when marking as answered
+      // Trigger animation and confetti only when marking as answered
       if (answered) {
         setIsAnimating(true);
+        triggerSuccess(); // Add confetti celebration!
         setTimeout(() => setIsAnimating(false), 1000);
       }
 
