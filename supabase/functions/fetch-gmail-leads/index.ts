@@ -1,9 +1,8 @@
-
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-import { validateUser, getUserProfile } from './auth-handler.ts';
+import { validateUser } from './auth-handler.ts';
 import { GmailClient } from './gmail-client.ts';
 import { extractEmailBody, extractEmailHeaders, isAutomatedEmail } from './email-parser.ts';
 import { classifyEmailWithAI } from './ai-classifier.ts';
@@ -11,7 +10,7 @@ import { LeadData } from './types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-google-token',
 };
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,14 +21,19 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== Gmail Leads Fetch Function Started ===');
     
-    // Validate user and get profile
+    // Validate user
     const user = await validateUser(req.headers.get('Authorization'));
-    const profile = await getUserProfile(user.id);
+    
+    // Get Google access token from header (passed directly from frontend)
+    const googleToken = req.headers.get('X-Google-Token');
+    if (!googleToken) {
+      throw new Error('No Google access token provided. Please sign out and sign in again with Google to enable Gmail sync.');
+    }
 
     console.log('Google access token found, testing validity...');
     
     // Initialize Gmail client
-    const gmailClient = new GmailClient(profile.google_access_token);
+    const gmailClient = new GmailClient(googleToken);
     
     // Test the Google access token
     const isValidToken = await gmailClient.validateToken();

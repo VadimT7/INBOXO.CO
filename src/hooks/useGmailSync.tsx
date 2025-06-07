@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,8 +20,7 @@ export function useGmailSync() {
       // Clear any cached token issues
       localStorage.removeItem('welcomeToastShown');
 
-      console.log('Session: ', session);
-      console.log('Session found, invoking fetch-gmail-leads function...');
+      console.log('Session found, checking for Google access token...');
       
       // Ensure we have a valid access token
       if (!session.session.access_token) {
@@ -31,19 +29,19 @@ export function useGmailSync() {
         return;
       }
       
-      console.log('Access Token: ', session.session.access_token);
-      
-      // We'll use the provider token from the session directly
-      // This is more reliable than trying to fetch from profiles
+      // We need the provider token (Google access token) for Gmail API
       if (!session.session.provider_token) {
         console.error('No provider token found in session');
         toast.error('Google access token not found. Please sign out and sign in again with Google.');
         return;
       }
       
+      console.log('Google access token found, calling Edge function...');
+      
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
         headers: {
           Authorization: 'Bearer ' + session.session.access_token,
+          'X-Google-Token': session.session.provider_token, // Pass Google token separately
         },
       });
 
