@@ -70,8 +70,8 @@ serve(async (req) => {
         },
       ],
       mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/leads?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/subscription`,
+      success_url: `${req.headers.get('origin')}/billing?subscription=success`,
+      cancel_url: `${req.headers.get('origin')}/billing`,
       automatic_tax: { enabled: false },
       customer_email: user.email,
       metadata: {

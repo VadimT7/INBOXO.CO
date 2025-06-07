@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { supabase } from '@/integrations/supabase/client';
+import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -123,6 +124,7 @@ const plans = [
 const BillingPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [subscriptionData, setSubscriptionData] = useState<SubscriptionData | null>(null);
   const [billingHistory, setBillingHistory] = useState<BillingHistory[]>([]);
   const [usageData, setUsageData] = useState<UsageData | null>(null);
@@ -138,6 +140,36 @@ const BillingPage = () => {
       loadBillingData();
     }
   }, [authLoading, user]);
+
+  // Check for successful subscription return from Stripe
+  useEffect(() => {
+    if (searchParams.get('subscription') === 'success') {
+      // Show success message
+      toast.success('Subscription updated successfully! Your new plan is now active.');
+      
+      // Wait a moment for webhook to process, then refresh data
+      // Retry mechanism in case webhook hasn't processed yet
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      const refreshWithRetry = async () => {
+        await loadBillingData();
+        
+        // If still showing free status and we haven't exceeded retries, try again
+        if (retryCount < maxRetries && subscriptionData?.subscription_status === 'free') {
+          retryCount++;
+          setTimeout(refreshWithRetry, 3000);
+        }
+      };
+      
+      setTimeout(refreshWithRetry, 2000);
+      
+      // Clean up URL parameters
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('subscription');
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+    }
+  }, [searchParams, navigate, subscriptionData]);
 
   const loadBillingData = async () => {
     try {
@@ -228,11 +260,20 @@ const BillingPage = () => {
   };
 
   const getCurrentPlan = () => {
+    const status = subscriptionData?.subscription_status || 'free';
     const planName = subscriptionData?.subscription_plan || 'free';
-    if (planName === 'free') {
+    
+    if (status === 'free' || !planName || planName === 'free') {
       return { name: 'Free', price: '0', description: 'Basic features for getting started' };
     }
-    return plans.find(plan => plan.name.toLowerCase() === planName.toLowerCase()) || plans[0];
+    
+    if (status === 'trial') {
+      return { name: 'Free', price: '0', description: 'Trial period - basic features for getting started' };
+    }
+    
+    // Map plan names to the actual plans
+    const plan = plans.find(plan => plan.name.toLowerCase() === planName.toLowerCase());
+    return plan || { name: 'Free', price: '0', description: 'Basic features for getting started' };
   };
 
   const handleUpgrade = async (plan: typeof plans[0]) => {
@@ -411,7 +452,10 @@ const BillingPage = () => {
                       Current Plan
                     </div>
                     <Badge variant={getStatusBadgeVariant(subscriptionData?.subscription_status || 'free')}>
-                      {subscriptionData?.subscription_status || 'Free'}
+                      {subscriptionData?.subscription_status === 'active' ? 'Active' : 
+                       subscriptionData?.subscription_status === 'trial' ? 'Trial' : 
+                       subscriptionData?.subscription_status === 'free' ? 'Free' : 
+                       subscriptionData?.subscription_status || 'Free'}
                     </Badge>
                   </CardTitle>
                 </CardHeader>

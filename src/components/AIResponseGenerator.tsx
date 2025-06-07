@@ -11,6 +11,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAIResponseHistory } from '@/hooks/useAIResponseHistory';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AIResponseGeneratorProps {
   lead: {
@@ -84,19 +85,58 @@ export const AIResponseGenerator = ({ lead, onUseResponse }: AIResponseGenerator
       // Get similar past responses for context
       const similarResponses = await getSimilarResponses(lead.sender_email);
       
-      // Simulate AI processing with a realistic delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the real AI endpoint
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      // Generate response based on lead content and selected options
-      const response = generateResponseBasedOnContent(
-        lead.full_content || lead.snippet,
-        lead.subject,
-        selectedTone,
-        responseLength,
-        similarResponses
-      );
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-ai-response`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          emailContent: lead.full_content || lead.snippet,
+          emailSubject: lead.subject,
+          senderEmail: lead.sender_email,
+          tone: selectedTone,
+          length: responseLength,
+          writingStyle,
+          similarResponses
+        }),
+      });
 
-      setGeneratedResponse(response);
+      if (!response.ok) {
+        console.error('Response not OK:', response.status, response.statusText);
+        let errorMessage = 'Failed to generate response';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          console.error('Could not parse error response as JSON:', e);
+          const errorText = await response.text();
+          console.error('Error response text:', errorText);
+          errorMessage = `Server error (${response.status}): ${errorText || response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      let aiData;
+      try {
+        aiData = await response.json();
+      } catch (e) {
+        console.error('Could not parse response as JSON:', e);
+        const responseText = await response.text();
+        console.error('Response text:', responseText);
+        throw new Error('Invalid response format from AI service');
+      }
+      
+      const generatedResponseText = aiData.response;
+
+      setGeneratedResponse(generatedResponseText);
       setGenerationTime((Date.now() - startTime) / 1000);
       
       // Save to history
@@ -106,7 +146,7 @@ export const AIResponseGenerator = ({ lead, onUseResponse }: AIResponseGenerator
           lead.sender_email,
           lead.subject,
           lead.full_content || lead.snippet,
-          response,
+          generatedResponseText,
           selectedTone,
           responseLength
         );
@@ -118,11 +158,45 @@ export const AIResponseGenerator = ({ lead, onUseResponse }: AIResponseGenerator
       }
       
       // Show success animation
-      toast.success('✨ AI Response Generated!', {
-        description: `Generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s`
+      toast.success('🤖 AI Response Generated!', {
+        description: `Generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s using GPT-4`
       });
-    } catch (error) {
-      toast.error('Failed to generate response');
+    } catch (error: any) {
+      console.error('AI generation error:', error);
+      
+      // If AI service fails, fall back to template-based response for now
+      if (error.message?.includes('AI service not configured') || error.message?.includes('Invalid response format')) {
+        console.log('Falling back to template-based response');
+        const fallbackResponse = generateResponseBasedOnContent(
+          lead.full_content || lead.snippet,
+          lead.subject,
+          selectedTone,
+          responseLength,
+          []
+        );
+        
+        setGeneratedResponse(fallbackResponse);
+        setGenerationTime((Date.now() - startTime) / 1000);
+        
+        // Save to history
+        if (lead.id) {
+          await saveResponseToHistory(
+            lead.id,
+            lead.sender_email,
+            lead.subject,
+            lead.full_content || lead.snippet,
+            fallbackResponse,
+            selectedTone,
+            responseLength
+          );
+        }
+        
+        toast.success('📝 Response Generated!', {
+          description: `Generated in ${((Date.now() - startTime) / 1000).toFixed(1)}s (template-based)`
+        });
+      } else {
+        toast.error(error.message || 'Failed to generate response');
+      }
     } finally {
       setIsGenerating(false);
     }

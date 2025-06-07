@@ -88,6 +88,25 @@ interface UserSettings {
     analyticsTracking: boolean;
     shareData: boolean;
   };
+  businessContext?: {
+    companyName?: string;
+    industry?: string;
+    description?: string;
+    targetAudience?: string;
+    services?: Array<{
+      name: string;
+      description: string;
+      price: string;
+    }>;
+    pricingPlans?: Array<{
+      name: string;
+      price: string;
+      billing: string;
+      description: string;
+      features: string[];
+    }>;
+    valuePropositions?: string[];
+  };
 }
 
 interface SubscriptionData {
@@ -246,6 +265,15 @@ const SettingsPage = () => {
           dataRetention: 365, // 1 year
           analyticsTracking: true,
           shareData: false,
+        },
+        businessContext: {
+          companyName: '',
+          industry: '',
+          description: '',
+          targetAudience: '',
+          services: [],
+          pricingPlans: [],
+          valuePropositions: [],
         },
       };
 
@@ -1389,6 +1417,315 @@ const SettingsPage = () => {
 
             {/* Advanced */}
             <TabsContent value="advanced" className="space-y-6">
+              {/* Business Context for AI */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Bot className="h-5 w-5 mr-2" />
+                    Business Context for AI Responses
+                  </CardTitle>
+                  <p className="text-sm text-slate-600">
+                    Provide details about your business to help AI generate more relevant and converting responses
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Company Information */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-slate-700">Company Information</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="companyName">Company Name</Label>
+                        <Input
+                          id="companyName"
+                          value={settings.businessContext?.companyName || ''}
+                          onChange={(e) => updateSettings('businessContext.companyName', e.target.value)}
+                          placeholder="Your Company Name"
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="industry">Industry</Label>
+                        <Input
+                          id="industry"
+                          value={settings.businessContext?.industry || ''}
+                          onChange={(e) => updateSettings('businessContext.industry', e.target.value)}
+                          placeholder="e.g., SaaS, Marketing, Consulting"
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="businessDescription">Business Description</Label>
+                      <Textarea
+                        id="businessDescription"
+                        value={settings.businessContext?.description || ''}
+                        onChange={(e) => updateSettings('businessContext.description', e.target.value)}
+                        placeholder="Describe what your business does and how you help customers..."
+                        className="mt-1 min-h-[100px]"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="targetAudience">Target Audience</Label>
+                      <Textarea
+                        id="targetAudience"
+                        value={settings.businessContext?.targetAudience || ''}
+                        onChange={(e) => updateSettings('businessContext.targetAudience', e.target.value)}
+                        placeholder="Describe your ideal customers and target market..."
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Services/Products */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-slate-700">Services/Products</h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const currentServices = settings.businessContext?.services || [];
+                          updateSettings('businessContext.services', [
+                            ...currentServices,
+                            { name: '', description: '', price: '' }
+                          ]);
+                        }}
+                      >
+                        Add Service
+                      </Button>
+                    </div>
+                    {(settings.businessContext?.services || []).map((service: any, index: number) => (
+                      <div key={index} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">Service {index + 1}</h4>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const currentServices = settings.businessContext?.services || [];
+                              const newServices = currentServices.filter((_: any, i: number) => i !== index);
+                              updateSettings('businessContext.services', newServices);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div>
+                            <Label>Service Name</Label>
+                            <Input
+                              value={service.name || ''}
+                              onChange={(e) => {
+                                const currentServices = [...(settings.businessContext?.services || [])];
+                                currentServices[index] = { ...service, name: e.target.value };
+                                updateSettings('businessContext.services', currentServices);
+                              }}
+                              placeholder="e.g., Website Design"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Input
+                              value={service.description || ''}
+                              onChange={(e) => {
+                                const currentServices = [...(settings.businessContext?.services || [])];
+                                currentServices[index] = { ...service, description: e.target.value };
+                                updateSettings('businessContext.services', currentServices);
+                              }}
+                              placeholder="Brief description"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Price</Label>
+                            <Input
+                              value={service.price || ''}
+                              onChange={(e) => {
+                                const currentServices = [...(settings.businessContext?.services || [])];
+                                currentServices[index] = { ...service, price: e.target.value };
+                                updateSettings('businessContext.services', currentServices);
+                              }}
+                              placeholder="e.g., $2,500"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator />
+
+                  {/* Pricing Plans */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-slate-700">Pricing Plans</h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const currentPlans = settings.businessContext?.pricingPlans || [];
+                          updateSettings('businessContext.pricingPlans', [
+                            ...currentPlans,
+                            { name: '', price: '', billing: 'month', description: '', features: [] }
+                          ]);
+                        }}
+                      >
+                        Add Plan
+                      </Button>
+                    </div>
+                    {(settings.businessContext?.pricingPlans || []).map((plan: any, index: number) => (
+                      <div key={index} className="p-4 border rounded-lg space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-sm">Plan {index + 1}</h4>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const currentPlans = settings.businessContext?.pricingPlans || [];
+                              const newPlans = currentPlans.filter((_: any, i: number) => i !== index);
+                              updateSettings('businessContext.pricingPlans', newPlans);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                          <div>
+                            <Label>Plan Name</Label>
+                            <Input
+                              value={plan.name || ''}
+                              onChange={(e) => {
+                                const currentPlans = [...(settings.businessContext?.pricingPlans || [])];
+                                currentPlans[index] = { ...plan, name: e.target.value };
+                                updateSettings('businessContext.pricingPlans', currentPlans);
+                              }}
+                              placeholder="e.g., Starter"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Price</Label>
+                            <Input
+                              value={plan.price || ''}
+                              onChange={(e) => {
+                                const currentPlans = [...(settings.businessContext?.pricingPlans || [])];
+                                currentPlans[index] = { ...plan, price: e.target.value };
+                                updateSettings('businessContext.pricingPlans', currentPlans);
+                              }}
+                              placeholder="99"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>Billing</Label>
+                            <Select
+                              value={plan.billing || 'month'}
+                              onValueChange={(value) => {
+                                const currentPlans = [...(settings.businessContext?.pricingPlans || [])];
+                                currentPlans[index] = { ...plan, billing: value };
+                                updateSettings('businessContext.pricingPlans', currentPlans);
+                              }}
+                            >
+                              <SelectTrigger className="mt-1">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="month">Monthly</SelectItem>
+                                <SelectItem value="year">Yearly</SelectItem>
+                                <SelectItem value="one-time">One-time</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Description</Label>
+                            <Input
+                              value={plan.description || ''}
+                              onChange={(e) => {
+                                const currentPlans = [...(settings.businessContext?.pricingPlans || [])];
+                                currentPlans[index] = { ...plan, description: e.target.value };
+                                updateSettings('businessContext.pricingPlans', currentPlans);
+                              }}
+                              placeholder="Plan description"
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label>Features (comma-separated)</Label>
+                          <Textarea
+                            value={(plan.features || []).join(', ')}
+                            onChange={(e) => {
+                              const currentPlans = [...(settings.businessContext?.pricingPlans || [])];
+                              currentPlans[index] = { 
+                                ...plan, 
+                                features: e.target.value.split(',').map((f: string) => f.trim()).filter((f: string) => f)
+                              };
+                              updateSettings('businessContext.pricingPlans', currentPlans);
+                            }}
+                            placeholder="Feature 1, Feature 2, Feature 3"
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Separator />
+
+                  {/* Value Propositions */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-medium text-slate-700">Unique Value Propositions</h3>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const currentProps = settings.businessContext?.valuePropositions || [];
+                          updateSettings('businessContext.valuePropositions', [...currentProps, '']);
+                        }}
+                      >
+                        Add Value Prop
+                      </Button>
+                    </div>
+                    {(settings.businessContext?.valuePropositions || []).map((prop: string, index: number) => (
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={prop}
+                          onChange={(e) => {
+                            const currentProps = [...(settings.businessContext?.valuePropositions || [])];
+                            currentProps[index] = e.target.value;
+                            updateSettings('businessContext.valuePropositions', currentProps);
+                          }}
+                          placeholder="e.g., 10x faster than competitors"
+                          className="flex-1"
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const currentProps = settings.businessContext?.valuePropositions || [];
+                            const newProps = currentProps.filter((_: string, i: number) => i !== index);
+                            updateSettings('businessContext.valuePropositions', newProps);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Alert>
+                    <Bot className="h-4 w-4" />
+                    <AlertDescription>
+                      This information helps AI generate more relevant responses that reference your specific services, pricing, and value propositions to convert more leads.
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
               {/* 
               <Card>
                 <CardHeader>
