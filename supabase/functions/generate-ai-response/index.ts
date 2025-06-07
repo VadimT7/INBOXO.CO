@@ -51,14 +51,16 @@ serve(async (req) => {
       throw new Error('AI service not configured. Please contact support.')
     }
 
-    // Get user's business context from settings
+    // Get user's business context and profile from settings
     const { data: settingsData } = await supabaseClient
       .from('user_settings')
       .select('settings')
       .eq('user_id', user.id)
       .single()
 
-    const businessContext = settingsData?.settings?.businessContext || {}
+    const settings = settingsData?.settings || {}
+    const businessContext = settings.businessContext || {}
+    const userFullName = settings.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
 
     // Build the comprehensive prompt
     const systemPrompt = `You are an AI email assistant that generates professional, personalized email responses for a business. Your goal is to convert leads into customers by providing helpful, relevant information that addresses their needs while showcasing the business value.
@@ -72,7 +74,11 @@ SERVICES/PRODUCTS:
 ${businessContext.services?.length > 0 ? businessContext.services.map((service: any) => `- ${service.name}: ${service.description} (${service.price})`).join('\n') : 'No specific services listed'}
 
 PRICING PLANS:
-${businessContext.pricingPlans?.length > 0 ? businessContext.pricingPlans.map((plan: any) => `- ${plan.name}: $${plan.price}/${plan.billing} - ${plan.description}\n  Features: ${plan.features?.join(', ') || 'No features listed'}`).join('\n') : 'No pricing plans listed'}
+${businessContext.pricingPlans?.length > 0 ? businessContext.pricingPlans.map((plan: any) => {
+  const features = plan.features && plan.features.length > 0 ? plan.features.join(', ') : 'Standard features included';
+  const description = plan.description || 'Perfect for your needs';
+  return `- ${plan.name}: $${plan.price}/${plan.billing} - ${description}\n  Features: ${features}`;
+}).join('\n') : 'No pricing plans listed'}
 
 UNIQUE VALUE PROPOSITIONS:
 ${businessContext.valuePropositions?.length > 0 ? businessContext.valuePropositions.join('\n- ') : 'No specific value propositions listed'}
@@ -83,7 +89,8 @@ ${businessContext.targetAudience ? businessContext.targetAudience : 'General bus
 WRITING STYLE PREFERENCES:
 - Preferred tone: ${writingStyle?.preferred_tone || tone}
 - Preferred length: ${writingStyle?.preferred_length || length}
-- Signature: ${writingStyle?.signature || '[User Name]'}
+- Your name (for signature): ${userFullName}
+- Signature: ${writingStyle?.signature || userFullName}
 ${writingStyle?.custom_phrases?.length > 0 ? `- Custom phrases to incorporate: ${writingStyle.custom_phrases.join(', ')}` : ''}
 
 RESPONSE REQUIREMENTS:
@@ -94,7 +101,9 @@ RESPONSE REQUIREMENTS:
 - Highlight unique value propositions when appropriate
 - Be conversational and helpful, not salesy
 - Address the sender's specific needs or questions
-- Include next steps or ways to continue the conversation`
+- Include next steps or ways to continue the conversation
+- ALWAYS end with YOUR name: "Best regards, ${userFullName}" or "Best, ${userFullName}" or similar
+- Use the CUSTOMER'S name (extract from email sender or content) for personalization throughout the response`
 
     const userPrompt = `Generate a ${tone} email response (${length} length) to this email:
 
@@ -113,6 +122,8 @@ INSTRUCTIONS:
 6. Keep the ${tone} tone throughout
 7. Use the business context to provide specific, relevant value
 8. Don't be overly promotional - focus on being helpful first
+9. Use the customer's name (from ${senderEmail} or email content) for personalization throughout
+10. MUST end the email with "Best regards, ${userFullName}" or "Best, ${userFullName}"
 
 Generate a response that converts this lead by being genuinely helpful and relevant to their needs.`
 

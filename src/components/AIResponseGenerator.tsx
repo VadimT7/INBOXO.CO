@@ -32,7 +32,7 @@ export const AIResponseGenerator = ({ lead, onUseResponse }: AIResponseGenerator
     (writingStyle.preferred_tone as any) || 'professional'
   );
   const [responseLength, setResponseLength] = useState<'short' | 'medium' | 'detailed'>(
-    (writingStyle.preferred_length as any) || 'medium'
+    (writingStyle.preferred_length as any) || 'short'
   );
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [copied, setCopied] = useState(false);
