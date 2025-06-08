@@ -13,7 +13,7 @@ const plans = [
   {
     name: "Starter",
     price: "49",
-    priceId: "prod_SOyB4bsEGx80b2",
+    priceId: "price_1RUAFAR4VctRXueqTXYvL5w8",
     description: "Perfect for small teams and startups",
     features: [
       "Up to 1,000 leads per month",
@@ -28,7 +28,7 @@ const plans = [
   {
     name: "Professional",
     price: "99",
-    priceId: "prod_SOyBreKNsjPxf1",
+    priceId: "price_1RUAFPR4VctRXueqhOyOSFnq",
     description: "For growing businesses",
     features: [
       "Up to 10,000 leads per month",
@@ -45,7 +45,7 @@ const plans = [
   {
     name: "Enterprise",
     price: "299",
-    priceId: "prod_SOyEW0RCVxXjb4",
+    priceId: "price_1RUAHbR4VctRXueqklf7r7hi",
     description: "For large organizations",
     features: [
       "Unlimited leads",
@@ -242,7 +242,7 @@ const SubscriptionPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-16">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-16 pt-32">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -268,7 +268,7 @@ const SubscriptionPage = () => {
       </div>
 
       {/* Pricing Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 pt-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {plans.map((plan, index) => (
             <PricingCard 
