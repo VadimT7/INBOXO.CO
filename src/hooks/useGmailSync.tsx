@@ -78,10 +78,17 @@ export function useGmailSync() {
 
       console.log('Gmail sync result:', data);
       
-      if (data.count > 0) {
-        toast.success(`Found ${data.count} new leads from your Gmail!`);
+      if (data.new_leads > 0 || data.responses_tracked > 0) {
+        const messages = [];
+        if (data.new_leads > 0) {
+          messages.push(`${data.new_leads} new leads`);
+        }
+        if (data.responses_tracked > 0) {
+          messages.push(`${data.responses_tracked} responses tracked`);
+        }
+        toast.success(`📧 Gmail sync complete: ${messages.join(', ')}!`);
       } else {
-        toast.info('No new leads found in your Gmail');
+        toast.info('Gmail sync complete - no new leads or responses found');
       }
 
       return data;

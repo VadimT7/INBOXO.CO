@@ -47,10 +47,10 @@ serve(async (req) => {
       .eq('period_month', currentMonth)
       .single()
 
-    // Get user's subscription plan to determine limits
+    // Get user's subscription plan and emails_sent to determine limits
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
-      .select('subscription_status, subscription_plan')
+      .select('subscription_status, subscription_plan, emails_sent')
       .eq('id', user.id)
       .single()
 
@@ -83,7 +83,7 @@ serve(async (req) => {
       storage_used: (usage?.storage_used_mb || 0) / 1024, // Convert MB to GB
       storage_limit: limits.storage_limit,
       ai_responses_generated: usage?.ai_responses_generated || 0,
-      emails_sent: usage?.emails_sent || 0
+      emails_sent: profile?.emails_sent || 0 // Get from profiles table
     }
 
     return new Response(

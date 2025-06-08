@@ -43,88 +43,151 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Token validated, fetching Gmail messages...');
 
-    // Use a broader search query to get recent emails - don't exclude no-reply emails as they might contain leads
-    const query = `newer_than:7d`;
-    console.log('Gmail query:', query);
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Fetch emails from Gmail API
-    const listData = await gmailClient.fetchMessageList(query, 30);
-    console.log('Found messages:', listData.messages?.length || 0);
-
-    if (!listData.messages || listData.messages.length === 0) {
-      console.log('No messages found');
-      return new Response(
-        JSON.stringify({ message: 'No messages found in Gmail', count: 0 }),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Process messages with AI classification
+    // Fetch both incoming and sent emails
     const leads: LeadData[] = [];
-    const messageLimit = Math.min(listData.messages.length, 15); // Process max 15 messages
-    
-    console.log(`Processing ${messageLimit} messages with AI classification...`);
-    
-    for (let i = 0; i < messageLimit; i++) {
-      const message = listData.messages[i];
-      try {
-        console.log(`Processing message ${i + 1}/${messageLimit}: ${message.id}`);
-        
-        const messageData = await gmailClient.fetchMessage(message.id);
-        
-        // Extract headers and body
-        const { senderEmail, subject } = extractEmailHeaders(messageData);
-        
-        console.log(`Processing email: ${subject} (from: ${senderEmail})`);
+    let totalProcessed = 0;
+    let sentEmailsProcessed = 0;
 
-        // Skip only certain automated emails, but with more detailed logging
-        if (isAutomatedEmail(senderEmail)) {
-          console.log(`Potential automated email detected: ${senderEmail} - ${subject}`);
-          // Don't skip immediately, let the AI or keyword detection decide
+    // 1. Fetch incoming emails (potential leads)
+    console.log('Fetching incoming emails...');
+    const incomingQuery = `newer_than:7d`;
+    const incomingData = await gmailClient.fetchMessageList(incomingQuery, 30);
+    console.log('Found incoming messages:', incomingData.messages?.length || 0);
+
+    if (incomingData.messages && incomingData.messages.length > 0) {
+      const messageLimit = Math.min(incomingData.messages.length, 15);
+      console.log(`Processing ${messageLimit} incoming messages with AI classification...`);
+      
+      for (let i = 0; i < messageLimit; i++) {
+        const message = incomingData.messages[i];
+        try {
+          console.log(`Processing incoming message ${i + 1}/${messageLimit}: ${message.id}`);
+          
+          const messageData = await gmailClient.fetchMessage(message.id);
+          const { senderEmail, subject } = extractEmailHeaders(messageData);
+          
+          console.log(`Processing email: ${subject} (from: ${senderEmail})`);
+
+          if (isAutomatedEmail(senderEmail)) {
+            console.log(`Potential automated email detected: ${senderEmail} - ${subject}`);
+          }
+
+          const body = extractEmailBody(messageData);
+          console.log(`Analyzing email with AI: ${senderEmail} - ${subject}`);
+          
+          const aiResult = await classifyEmailWithAI(subject, body, senderEmail);
+          console.log(`AI Classification: isLead=${aiResult.isLead}, classification=${aiResult.classification}, confidence=${aiResult.confidence}`);
+          
+          if (!aiResult.isLead) {
+            console.log(`AI classified as non-lead: ${senderEmail} - ${subject}`);
+            continue;
+          }
+
+          console.log(`✓ AI detected lead: ${senderEmail} - ${subject} (${aiResult.classification}, ${aiResult.confidence}% confidence)`);
+
+          const lead: LeadData = {
+            user_id: user.id,
+            gmail_message_id: messageData.id,
+            sender_email: senderEmail,
+            subject: subject,
+            snippet: messageData.snippet || body.substring(0, 200),
+            received_at: new Date(parseInt(messageData.internalDate)).toISOString(),
+            status: aiResult.classification,
+            notes: `AI Classification: ${aiResult.reasoning} (Confidence: ${aiResult.confidence}%)`
+          };
+
+          leads.push(lead);
+          totalProcessed++;
+
+        } catch (error) {
+          console.error(`Error processing incoming message ${message.id}:`, error);
         }
-
-        const body = extractEmailBody(messageData);
-        
-        console.log(`Analyzing email with AI: ${senderEmail} - ${subject}`);
-        
-        // Use AI to classify the email
-        const aiResult = await classifyEmailWithAI(subject, body, senderEmail);
-        
-        console.log(`AI Classification: isLead=${aiResult.isLead}, classification=${aiResult.classification}, confidence=${aiResult.confidence}`);
-        
-        if (!aiResult.isLead) {
-          console.log(`AI classified as non-lead: ${senderEmail} - ${subject}`);
-          continue;
-        }
-
-        console.log(`✓ AI detected lead: ${senderEmail} - ${subject} (${aiResult.classification}, ${aiResult.confidence}% confidence)`);
-
-        const lead: LeadData = {
-          user_id: user.id,
-          gmail_message_id: messageData.id,
-          sender_email: senderEmail,
-          subject: subject,
-          snippet: messageData.snippet || body.substring(0, 200),
-          received_at: new Date(parseInt(messageData.internalDate)).toISOString(),
-          status: aiResult.classification,
-          notes: `AI Classification: ${aiResult.reasoning} (Confidence: ${aiResult.confidence}%)`
-        };
-
-        leads.push(lead);
-
-      } catch (error) {
-        console.error(`Error processing message ${message.id}:`, error);
       }
     }
 
-    console.log(`Total AI-classified leads to insert: ${leads.length}`);
+    // 2. Fetch sent emails to track responses
+    console.log('Fetching sent emails to track responses...');
+    const sentQuery = `in:sent newer_than:7d`;
+    const sentData = await gmailClient.fetchMessageList(sentQuery, 20);
+    console.log('Found sent messages:', sentData.messages?.length || 0);
 
-    // Insert leads into Supabase
+    if (sentData.messages && sentData.messages.length > 0) {
+      // Get existing leads to match against sent emails
+      const { data: existingLeads } = await supabase
+        .from('leads')
+        .select('id, sender_email, subject, gmail_message_id')
+        .eq('user_id', user.id);
+
+      console.log(`Processing ${sentData.messages.length} sent messages to track responses...`);
+      
+      for (const message of sentData.messages) {
+        try {
+          const messageData = await gmailClient.fetchMessage(message.id);
+          const { senderEmail: recipientEmail, subject } = extractEmailHeaders(messageData);
+          
+          // Check if this sent email is a response to an existing lead
+          const matchingLead = existingLeads?.find(lead => {
+            const emailMatch = lead.sender_email.toLowerCase() === recipientEmail.toLowerCase();
+            const subjectMatch = subject.toLowerCase().includes('re:') || 
+                                 lead.subject.toLowerCase().includes(subject.toLowerCase().replace('re:', '').trim()) ||
+                                 subject.toLowerCase().includes(lead.subject.toLowerCase());
+            return emailMatch && subjectMatch;
+          });
+
+          if (matchingLead) {
+            console.log(`✓ Found response to lead: ${recipientEmail} - ${subject}`);
+            
+            // Update the lead to mark it as answered
+            const { error: updateError } = await supabase
+              .from('leads')
+              .update({ 
+                answered: true,
+                answered_at: new Date(parseInt(messageData.internalDate)).toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', matchingLead.id);
+
+            if (updateError) {
+              console.error('Error updating lead response status:', updateError);
+            } else {
+              console.log(`✓ Marked lead ${matchingLead.id} as answered`);
+              sentEmailsProcessed++;
+            }
+
+            // Track the sent email in profiles table for now
+            const { error: usageError } = await supabase.rpc('increment_emails_sent', {
+              user_id_param: user.id
+            });
+
+            if (usageError) {
+              console.error('Error updating sent email count:', usageError);
+              // Fallback: try to update profiles table directly
+              const { error: profileError } = await supabase
+                .from('profiles')
+                .update({ 
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+              
+              if (profileError) {
+                console.error('Error updating profile:', profileError);
+              }
+            }
+          }
+
+        } catch (error) {
+          console.error(`Error processing sent message ${message.id}:`, error);
+        }
+      }
+    }
+
+    // Insert new leads into Supabase
     if (leads.length > 0) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
-
       const { data: insertData, error: insertError } = await supabase
         .from('leads')
         .upsert(leads, { 
@@ -142,10 +205,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const result = { 
-      message: 'Gmail leads processed successfully with AI classification', 
-      count: leads.length,
-      processed: messageLimit,
-      total_found: listData.messages.length
+      message: 'Gmail sync completed successfully', 
+      new_leads: leads.length,
+      responses_tracked: sentEmailsProcessed,
+      total_processed: totalProcessed,
+      incoming_found: incomingData.messages?.length || 0,
+      sent_found: sentData.messages?.length || 0
     };
     
     console.log('=== Function completed successfully ===', result);
