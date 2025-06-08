@@ -299,7 +299,7 @@ const BillingPage = () => {
     const status = subscriptionData?.subscription_status || 'free';
     const planName = subscriptionData?.subscription_plan || 'free';
     
-    if (status === 'free' || !planName || planName === 'free') {
+    if (status === 'free' || status === 'canceled' || !planName || planName === 'free') {
       return { name: 'Free', price: '0', description: 'Basic features for getting started' };
     }
     
@@ -493,6 +493,7 @@ const BillingPage = () => {
                       {subscriptionData?.subscription_status === 'active' ? 'Active' : 
                        subscriptionData?.subscription_status === 'trial' ? 'Trial' : 
                        subscriptionData?.subscription_status === 'free' ? 'Free' : 
+                       subscriptionData?.subscription_status === 'canceled' ? 'Canceled' :
                        subscriptionData?.subscription_status || 'Free'}
                     </Badge>
                   </CardTitle>
