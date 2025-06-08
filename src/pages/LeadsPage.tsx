@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { useGmailSync } from '@/hooks/useGmailSync';
 import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { toast } from 'sonner';
 import { 
   RefreshCw, Mail, Search, Filter, Zap, Target, Trophy, Star,
@@ -51,6 +52,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { AIResponseGenerator } from '@/components/AIResponseGenerator';
+import SubscriptionOverlay from '@/components/subscription/SubscriptionOverlay';
 
 interface Lead {
   id: string;
@@ -72,6 +74,7 @@ const LeadsPage = () => {
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const { markLeadAsResponded } = useResponseTimeAnalytics();
   const { triggerSuccess } = useConfetti();
+  const { isCanceled } = useSubscriptionStatus();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -1030,9 +1033,15 @@ const LeadsPage = () => {
               </div>
             )}
           </DialogContent>
-        </Dialog>
+                  </Dialog>
+        </div>
+        
+        <SubscriptionOverlay 
+          isVisible={isCanceled}
+          title="Leads Access Suspended"
+          message="Your subscription has been canceled. Reactivate your subscription to continue managing and responding to your leads."
+        />
       </div>
-    </div>
   );
 };
 

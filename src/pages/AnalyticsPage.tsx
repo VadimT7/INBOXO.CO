@@ -12,6 +12,8 @@ import {
 import { motion } from 'framer-motion';
 import { useAdvancedAnalytics } from '@/hooks/useAdvancedAnalytics';
 import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
+import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import SubscriptionOverlay from '@/components/subscription/SubscriptionOverlay';
 import {
   LineChart,
   Line,
@@ -44,6 +46,7 @@ const AnalyticsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const { isCanceled } = useSubscriptionStatus();
   
   const { 
     leadScores, 
@@ -414,6 +417,12 @@ const AnalyticsPage = () => {
           </Card>
         </motion.div>
       </div>
+      
+      <SubscriptionOverlay 
+        isVisible={isCanceled}
+        title="Analytics Access Suspended"
+        message="Your subscription has been canceled. Reactivate your subscription to continue viewing detailed analytics and insights."
+      />
     </div>
   );
 };
