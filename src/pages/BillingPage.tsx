@@ -134,6 +134,7 @@ const BillingPage = () => {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showEnterpriseDialog, setShowEnterpriseDialog] = useState(false);
+  const [refreshingSubscription, setRefreshingSubscription] = useState(false);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -144,32 +145,52 @@ const BillingPage = () => {
   // Check for successful subscription return from Stripe
   useEffect(() => {
     if (searchParams.get('subscription') === 'success') {
-      // Show success message
       toast.success('Subscription updated successfully! Your new plan is now active.');
+      setRefreshingSubscription(true);
       
-      // Wait a moment for webhook to process, then refresh data
-      // Retry mechanism in case webhook hasn't processed yet
-      let retryCount = 0;
-      const maxRetries = 3;
-      
-      const refreshWithRetry = async () => {
-        await loadBillingData();
-        
-        // If still showing free status and we haven't exceeded retries, try again
-        if (retryCount < maxRetries && subscriptionData?.subscription_status === 'free') {
-          retryCount++;
-          setTimeout(refreshWithRetry, 3000);
+      const syncSubscription = async () => {
+        try {
+          // Call the manual sync function
+          const { data: { session } } = await supabase.auth.getSession();
+          const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manual-sync-subscription`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Subscription sync result:', result);
+            
+            if (result.success) {
+              // Refresh the billing data to show updated status
+              await loadBillingData();
+            }
+          } else {
+            console.error('Sync failed:', response.status);
+            // Fallback to regular data refresh
+            await loadBillingData();
+          }
+        } catch (error) {
+          console.error('Error syncing subscription:', error);
+          // Fallback to regular data refresh
+          await loadBillingData();
+        } finally {
+          setRefreshingSubscription(false);
         }
       };
-      
-      setTimeout(refreshWithRetry, 2000);
+
+      // Small delay to allow Stripe webhook to process first
+      setTimeout(syncSubscription, 2000);
       
       // Clean up URL parameters
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('subscription');
       navigate({ search: newSearchParams.toString() }, { replace: true });
     }
-  }, [searchParams, navigate, subscriptionData]);
+  }, [searchParams, navigate]);
 
   const loadBillingData = async () => {
     try {
@@ -193,20 +214,35 @@ const BillingPage = () => {
       ]);
 
       // Handle profile data
-      if (profileResult.status === 'fulfilled' && profileResult.value.data) {
+      if (profileResult.status === 'fulfilled') {
         const { data: profileData, error: profileError } = profileResult.value;
-        if (profileError && profileError.code !== 'PGRST116') {
-          console.error('Error fetching subscription data:', profileError);
-          setSubscriptionData({ subscription_status: 'free' });
-        } else if (profileData) {
-          setSubscriptionData({
-            subscription_status: profileData.subscription_status || 'free',
-            subscription_plan: profileData.subscription_plan,
-            stripe_customer_id: profileData.stripe_customer_id,
-            stripe_subscription_id: profileData.stripe_subscription_id,
-            trial_ends_at: profileData.trial_ends_at,
-            subscription_created_at: profileData.subscription_created_at
-          });
+        
+        // Check if the error is due to missing columns
+        if (profileError) {
+          if (profileError.code === 'PGRST116' || profileError.message?.includes('does not exist')) {
+            console.warn('Subscription columns not found in profiles table, using defaults');
+            setSubscriptionData({ subscription_status: 'free' });
+          } else {
+            console.error('Error fetching subscription data:', profileError);
+            setSubscriptionData({ subscription_status: 'free' });
+          }
+        } else if (profileData && typeof profileData === 'object' && !Array.isArray(profileData)) {
+          // Type guard to ensure profileData has the expected structure
+          const hasSubscriptionFields = 'subscription_status' in profileData;
+          
+          if (hasSubscriptionFields) {
+            setSubscriptionData({
+              subscription_status: (profileData as any).subscription_status || 'free',
+              subscription_plan: (profileData as any).subscription_plan,
+              stripe_customer_id: (profileData as any).stripe_customer_id,
+              stripe_subscription_id: (profileData as any).stripe_subscription_id,
+              trial_ends_at: (profileData as any).trial_ends_at,
+              subscription_created_at: (profileData as any).subscription_created_at
+            });
+          } else {
+            console.warn('Profile data missing subscription fields');
+            setSubscriptionData({ subscription_status: 'free' });
+          }
         } else {
           setSubscriptionData({ subscription_status: 'free' });
         }
@@ -396,12 +432,14 @@ const BillingPage = () => {
     subscriptionData?.trial_ends_at && 
     new Date(subscriptionData.trial_ends_at) > new Date();
 
-  if (authLoading || loading) {
+  if (authLoading || loading || refreshingSubscription) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading billing information...</p>
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">
+            {refreshingSubscription ? 'Updating your subscription status...' : 'Loading your billing information...'}
+          </p>
         </div>
       </div>
     );
@@ -548,6 +586,44 @@ const BillingPage = () => {
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={async () => {
+                          setRefreshingSubscription(true);
+                          try {
+                            const { data: { session } } = await supabase.auth.getSession();
+                            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manual-sync-subscription`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${session?.access_token}`,
+                                'Content-Type': 'application/json',
+                              },
+                            });
+
+                            if (response.ok) {
+                              const result = await response.json();
+                              if (result.success) {
+                                toast.success('Subscription status synchronized!');
+                                await loadBillingData();
+                              } else {
+                                toast.error('No subscription changes found');
+                              }
+                            } else {
+                              toast.error('Failed to sync subscription');
+                            }
+                          } catch (error) {
+                            console.error('Error syncing:', error);
+                            toast.error('Failed to sync subscription');
+                          } finally {
+                            setRefreshingSubscription(false);
+                          }
+                        }}
+                        disabled={refreshingSubscription}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        {refreshingSubscription ? 'Syncing...' : 'Sync Subscription'}
                       </Button>
                     </CardTitle>
                   </CardHeader>
