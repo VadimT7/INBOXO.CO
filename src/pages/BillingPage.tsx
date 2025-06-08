@@ -692,7 +692,7 @@ const BillingPage = () => {
             )}
 
             {/* Billing History */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -747,7 +747,7 @@ const BillingPage = () => {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </motion.div> */}
           </div>
 
           {/* Right Column - Plan Comparison */}
@@ -809,7 +809,7 @@ const BillingPage = () => {
             </motion.div>
 
             {/* Payment Method */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
@@ -864,7 +864,7 @@ const BillingPage = () => {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </motion.div> */}
 
             {/* Next Billing */}
             {subscriptionData?.subscription_status === 'active' && subscriptionDetails && (
