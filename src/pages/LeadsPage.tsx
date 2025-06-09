@@ -62,7 +62,8 @@ interface Lead {
   full_content?: string;
   received_at: string;
   status: string;
-  is_archived?: boolean;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
   responded_at?: string | null;
   response_time_minutes?: number | null;
   answered?: boolean;
@@ -77,13 +78,13 @@ const LeadsPage = () => {
   const { hasValidAccess } = useSubscriptionStatus();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]); // Store all leads (active + deleted)
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [notes, setNotes] = useState('');
-  const [showArchived, setShowArchived] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [showFullContent, setShowFullContent] = useState(false);
   const [showAIResponse, setShowAIResponse] = useState(false);
   const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
@@ -174,19 +175,20 @@ const LeadsPage = () => {
       const overIndex = leads.findIndex(lead => lead.id === overId);
       
       if (activeIndex !== overIndex) {
-        setLeads(prev => arrayMove(prev, activeIndex, overIndex));
+        setAllLeads(prev => arrayMove(prev, activeIndex, overIndex));
       }
     }
   };
 
   const fetchLeads = async () => {
     if (!user) {
-      setLeads([]);
+      setAllLeads([]);
       setLoading(false);
       return;
     }
 
     try {
+      // Fetch ALL leads (both active and deleted) in one query
       const { data, error } = await supabase
         .from('leads')
         .select('*')
@@ -199,7 +201,7 @@ const LeadsPage = () => {
         return;
       }
 
-      setLeads(data || []);
+      setAllLeads(data || []);
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
@@ -222,7 +224,7 @@ const LeadsPage = () => {
       }
 
       // Update local state
-      setLeads(prev => prev.map(lead => 
+      setAllLeads(prev => prev.map(lead => 
         lead.id === leadId ? { ...lead, status: newStatus } : lead
       ));
 
@@ -241,59 +243,16 @@ const LeadsPage = () => {
     }
   };
 
-  const archiveLead = async (leadId: string) => {
-    try {
-      const { error } = await supabase
-        .from('leads')
-        .update({ is_archived: true })
-        .eq('id', leadId);
 
-      if (error) {
-        toast.error('Failed to archive lead');
-        return;
-      }
-
-      setLeads(prev => prev.map(lead => 
-        lead.id === leadId ? { ...lead, is_archived: true } : lead
-      ));
-      
-      toast.success('Lead archived');
-      setShowDetailsModal(false);
-    } catch (error) {
-      console.error('Error archiving lead:', error);
-      toast.error('Failed to archive lead');
-    }
-  };
-
-  const unarchiveLead = async (leadId: string) => {
-    try {
-      const { error } = await supabase
-        .from('leads')
-        .update({ is_archived: false })
-        .eq('id', leadId);
-
-      if (error) {
-        toast.error('Failed to activate lead');
-        return;
-      }
-
-      setLeads(prev => prev.map(lead => 
-        lead.id === leadId ? { ...lead, is_archived: false } : lead
-      ));
-      
-      toast.success('Lead activated');
-      setShowDetailsModal(false);
-    } catch (error) {
-      console.error('Error activating lead:', error);
-      toast.error('Failed to activate lead');
-    }
-  };
 
   const deleteLead = async (leadId: string) => {
     try {
       const { error } = await supabase
         .from('leads')
-        .delete()
+        .update({ 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString() 
+        })
         .eq('id', leadId);
 
       if (error) {
@@ -301,12 +260,63 @@ const LeadsPage = () => {
         return;
       }
 
-      setLeads(prev => prev.filter(lead => lead.id !== leadId));
-      toast.success('Lead deleted');
+      setAllLeads(prev => prev.map(lead => 
+        lead.id === leadId ? { ...lead, is_deleted: true, deleted_at: new Date().toISOString() } : lead
+      ));
+      toast.success('Lead deleted • View in Recently Deleted to restore', {
+        duration: 4000,
+      });
       setShowDetailsModal(false);
     } catch (error) {
       console.error('Error deleting lead:', error);
       toast.error('Failed to delete lead');
+    }
+  };
+
+  const restoreLead = async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          is_deleted: false, 
+          deleted_at: null 
+        })
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to restore lead');
+        return;
+      }
+
+      setAllLeads(prev => prev.map(lead => 
+        lead.id === leadId ? { ...lead, is_deleted: false, deleted_at: null } : lead
+      ));
+      toast.success('Lead restored');
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error('Error restoring lead:', error);
+      toast.error('Failed to restore lead');
+    }
+  };
+
+  const permanentlyDeleteLead = async (leadId: string) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) {
+        toast.error('Failed to permanently delete lead');
+        return;
+      }
+
+      setAllLeads(prev => prev.filter(lead => lead.id !== leadId));
+      toast.success('Lead permanently deleted');
+      setShowDetailsModal(false);
+    } catch (error) {
+      console.error('Error permanently deleting lead:', error);
+      toast.error('Failed to permanently delete lead');
     }
   };
 
@@ -348,7 +358,7 @@ const LeadsPage = () => {
       }
 
       // Update leads state
-      setLeads(prev => prev.map(lead => 
+      setAllLeads(prev => prev.map(lead => 
         lead.id === leadId ? { ...lead, ...updateData } : lead
       ));
 
@@ -390,10 +400,8 @@ const LeadsPage = () => {
   const handleReplyToLead = async (lead: Lead, message?: string) => {
     // Mark as responded when user clicks reply
     if (markLeadAsResponded) {
-      const success = await markLeadAsResponded(lead.id);
-      if (success) {
-        toast.success('Response time recorded!');
-      }
+      await markLeadAsResponded(lead.id);
+      toast.success('Response time recorded!');
     }
     
     // Automatically mark as answered
@@ -412,11 +420,32 @@ const LeadsPage = () => {
     window.location.href = mailtoUrl;
   };
 
+  // Computed property for current leads based on view
+  const leads = useMemo(() => {
+    if (showDeleted) {
+      return allLeads
+        .filter(lead => lead.is_deleted)
+        .sort((a, b) => {
+          const aDate = new Date(a.deleted_at || 0).getTime();
+          const bDate = new Date(b.deleted_at || 0).getTime();
+          return bDate - aDate; // Most recently deleted first
+        });
+    } else {
+      return allLeads
+        .filter(lead => !lead.is_deleted)
+        .sort((a, b) => {
+          const aDate = new Date(a.received_at).getTime();
+          const bDate = new Date(b.received_at).getTime();
+          return bDate - aDate; // Most recently received first
+        });
+    }
+  }, [allLeads, showDeleted]);
+
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads();
     } else if (!authLoading && !user) {
-      setLeads([]);
+      setAllLeads([]);
       setLoading(false);
     }
   }, [authLoading, user?.id]);
@@ -460,7 +489,7 @@ const LeadsPage = () => {
     return content;
   };
 
-  // Filter leads based on search query and archive status
+  // Filter leads based on search query and answered status
   const filteredLeads = useMemo(() => {
     return leads.filter(lead => {
       const matchesSearch = !searchQuery || 
@@ -468,15 +497,13 @@ const LeadsPage = () => {
         lead.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
         lead.snippet.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesArchiveFilter = showArchived ? lead.is_archived : !lead.is_archived;
-      
       const matchesAnsweredFilter = answeredFilter === 'all' || 
         (answeredFilter === 'answered' && lead.answered) ||
         (answeredFilter === 'unanswered' && !lead.answered);
       
-      return matchesSearch && matchesArchiveFilter && matchesAnsweredFilter;
+      return matchesSearch && matchesAnsweredFilter;
     });
-  }, [leads, searchQuery, showArchived, answeredFilter]);
+  }, [leads, searchQuery, answeredFilter]);
 
   const categorizedLeads = useMemo(() => ({
     unclassified: filteredLeads.filter(lead => lead.status === 'unclassified'),
@@ -486,9 +513,9 @@ const LeadsPage = () => {
   }), [filteredLeads]);
 
   // Basic metrics
-  const totalLeads = leads.filter(l => !l.is_archived).length;
-  const classifiedLeads = leads.filter(l => !l.is_archived && l.status !== 'unclassified').length;
-  const answeredLeads = leads.filter(l => !l.is_archived && l.answered).length;
+  const totalLeads = showDeleted ? leads.length : leads.filter(l => !l.is_deleted).length;
+  const classifiedLeads = showDeleted ? 0 : leads.filter(l => !l.is_deleted && l.status !== 'unclassified').length;
+  const answeredLeads = showDeleted ? 0 : leads.filter(l => !l.is_deleted && l.answered).length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
   const answeredPercentage = totalLeads > 0 ? (answeredLeads / totalLeads) * 100 : 0;
 
@@ -522,9 +549,11 @@ const LeadsPage = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
             <div>
               <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 bg-clip-text text-transparent">
-                Lead Mission Control
+                {showDeleted ? 'Recently Deleted' : 'Lead Mission Control'}
               </h1>
-              <p className="text-slate-600 mt-2 text-lg">Transform emails into opportunities 🚀</p>
+              <p className="text-slate-600 mt-2 text-lg">
+                {showDeleted ? 'Restore or permanently delete leads 🗑️' : 'Transform emails into opportunities 🚀'}
+              </p>
             </div>
 
             {/* Basic Stats */}
@@ -536,7 +565,7 @@ const LeadsPage = () => {
                 <div className="flex items-center space-x-2">
                   <Mail className="h-5 w-5 text-green-500" />
                   <div>
-                    <p className="text-xs text-slate-600">Active Leads</p>
+                    <p className="text-xs text-slate-600">{showDeleted ? 'Deleted Leads' : 'Active Leads'}</p>
                     <p className="text-lg font-bold text-slate-900">{totalLeads}</p>
                   </div>
                 </div>
@@ -606,12 +635,12 @@ const LeadsPage = () => {
               </Select>
               
               <Button
-                variant={showArchived ? 'default' : 'outline'}
-                onClick={() => setShowArchived(!showArchived)}
+                variant={showDeleted ? 'default' : 'outline'}
+                onClick={() => setShowDeleted(!showDeleted)}
                 className="rounded-xl"
               >
-                <Archive className="h-4 w-4 mr-2" />
-                {showArchived ? 'Show Active' : 'Show Archived'}
+                <Trash2 className="h-4 w-4 mr-2" />
+                {showDeleted ? 'Show Active' : 'Recently Deleted'}
               </Button>
               
               <Button
@@ -626,77 +655,163 @@ const LeadsPage = () => {
           </div>
         </motion.div>
 
-        {/* Kanban Board */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={rectIntersection}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {[
-              { 
-                key: 'unclassified', 
-                title: 'Unclassified', 
-                icon: Circle, 
-                color: 'slate', 
-                bgGradient: 'from-slate-400 to-slate-500',
-                count: categorizedLeads.unclassified.length 
-              },
-              { 
-                key: 'hot', 
-                title: 'Hot Leads', 
-                icon: Flame, 
-                color: 'red', 
-                bgGradient: 'from-red-500 to-orange-500',
-                count: categorizedLeads.hot.length 
-              },
-              { 
-                key: 'warm', 
-                title: 'Warm Leads', 
-                icon: ThermometerSun, 
-                color: 'yellow', 
-                bgGradient: 'from-yellow-400 to-orange-400',
-                count: categorizedLeads.warm.length 
-              },
-              { 
-                key: 'cold', 
-                title: 'Cold Leads', 
-                icon: Snowflake, 
-                color: 'blue', 
-                bgGradient: 'from-blue-400 to-blue-500',
-                count: categorizedLeads.cold.length 
-              }
-            ].map((column, index) => (
-              <DroppableColumn
-                key={column.key}
-                column={column}
-                leads={categorizedLeads[column.key as keyof typeof categorizedLeads]}
-                index={index}
-                onStatusChange={updateLeadStatus}
-                onSelectLead={(lead) => {
-                  setSelectedLead(lead);
-                  setShowDetailsModal(true);
-                }}
-                overId={overId}
-              />
-            ))}
-          </div>
-
-          <DragOverlay>
-            {activeId ? (
-              <div className="transform rotate-6 opacity-90">
-                <DraggableLeadCard
-                  lead={leads.find(l => l.id === activeId)!}
-                  onStatusChange={() => {}}
-                  onSelect={() => {}}
-                  columnColor="blue"
-                />
+        {/* Content Area */}
+        {showDeleted ? (
+          /* Deleted Leads List View */
+          <div className="space-y-4">
+            {filteredLeads.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center py-16"
+              >
+                <Trash2 className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                <h3 className="text-xl font-semibold text-slate-600 mb-2">No deleted leads</h3>
+                <p className="text-slate-500">Deleted leads will appear here and can be restored within 30 days.</p>
+              </motion.div>
+            ) : (
+              <div className="grid gap-4">
+                {filteredLeads.map((lead, index) => (
+                  <motion.div
+                    key={lead.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300">
+                      <CardContent className="p-6">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-3 mb-2">
+                              <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                              <h3 className="font-semibold text-slate-900 truncate">{lead.sender_email}</h3>
+                              <Badge variant="outline" className="text-xs">
+                                Deleted {lead.deleted_at ? new Date(lead.deleted_at).toLocaleDateString() : ''}
+                              </Badge>
+                            </div>
+                            <h4 className="text-sm font-medium text-slate-700 mb-2">
+                              {lead.subject || 'No subject'}
+                            </h4>
+                            <p className="text-sm text-slate-600 line-clamp-2">
+                              {lead.snippet}
+                            </p>
+                          </div>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedLead(lead);
+                                setShowDetailsModal(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => restoreLead(lead.id)}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Restore
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to permanently delete this lead? This action cannot be undone.')) {
+                                  permanentlyDeleteLead(lead.id);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Forever
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+            )}
+          </div>
+        ) : (
+          /* Kanban Board */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={rectIntersection}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {[
+                { 
+                  key: 'unclassified', 
+                  title: 'Unclassified', 
+                  icon: Circle, 
+                  color: 'slate', 
+                  bgGradient: 'from-slate-400 to-slate-500',
+                  count: categorizedLeads.unclassified.length 
+                },
+                { 
+                  key: 'hot', 
+                  title: 'Hot Leads', 
+                  icon: Flame, 
+                  color: 'red', 
+                  bgGradient: 'from-red-500 to-orange-500',
+                  count: categorizedLeads.hot.length 
+                },
+                { 
+                  key: 'warm', 
+                  title: 'Warm Leads', 
+                  icon: ThermometerSun, 
+                  color: 'yellow', 
+                  bgGradient: 'from-yellow-400 to-orange-400',
+                  count: categorizedLeads.warm.length 
+                },
+                { 
+                  key: 'cold', 
+                  title: 'Cold Leads', 
+                  icon: Snowflake, 
+                  color: 'blue', 
+                  bgGradient: 'from-blue-400 to-blue-500',
+                  count: categorizedLeads.cold.length 
+                }
+              ].map((column, index) => (
+                <DroppableColumn
+                  key={column.key}
+                  column={column}
+                  leads={categorizedLeads[column.key as keyof typeof categorizedLeads]}
+                  index={index}
+                  onStatusChange={updateLeadStatus}
+                  onSelectLead={(lead) => {
+                    setSelectedLead(lead);
+                    setShowDetailsModal(true);
+                  }}
+                  overId={overId}
+                />
+              ))}
+            </div>
+
+            <DragOverlay>
+              {activeId ? (
+                <div className="transform rotate-6 opacity-90">
+                  <DraggableLeadCard
+                    lead={leads.find(l => l.id === activeId)!}
+                    onStatusChange={() => {}}
+                    onSelect={() => {}}
+                    columnColor="blue"
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
 
         {/* Lead Details Modal */}
         <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
@@ -987,48 +1102,57 @@ const LeadsPage = () => {
 
                 <div className="flex justify-between pt-4 border-t">
                   <div className="flex gap-2">
-                    {selectedLead.is_archived ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => unarchiveLead(selectedLead.id)}
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Activate Lead
-                      </Button>
+                    {selectedLead.is_deleted ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() => restoreLead(selectedLead.id)}
+                          className="text-green-600 hover:text-green-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Restore Lead
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            if (confirm('Are you sure you want to permanently delete this lead? This action cannot be undone.')) {
+                              permanentlyDeleteLead(selectedLead.id);
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete Forever
+                        </Button>
+                      </>
                     ) : (
                       <Button
                         variant="outline"
-                        onClick={() => archiveLead(selectedLead.id)}
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this lead?')) {
+                            deleteLead(selectedLead.id);
+                          }
+                        }}
                       >
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
                       </Button>
                     )}
-                    <Button
-                      variant="outline"
-                      className="text-red-600 hover:text-red-700"
-                      onClick={() => {
-                        if (confirm('Are you sure you want to delete this lead?')) {
-                          deleteLead(selectedLead.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
                   </div>
                   
-                  <Button
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleReplyToLead(selectedLead);
-                    }}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    Reply With My Response
-                  </Button>
+                  {!selectedLead.is_deleted && (
+                    <Button
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReplyToLead(selectedLead);
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Reply With My Response
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
@@ -1106,9 +1230,9 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
         WebkitUserSelect: 'none',
       }}
     >
-      <Card className={cn(
+      <Card       className={cn(
         "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden",
-        lead.is_archived && "opacity-60",
+        lead.is_deleted && "opacity-60",
         lead.answered && "bg-green-50/80 border-green-200/40",
         !isBeingDragged && "cursor-pointer"
       )}>
@@ -1132,9 +1256,9 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
                 <Badge variant="outline" className="text-xs px-2 py-0">
                   {urgency.label}
                 </Badge>
-                {lead.is_archived && (
+                {lead.is_deleted && (
                   <Badge variant="secondary" className="text-xs px-2 py-0">
-                    Archived
+                    Deleted
                   </Badge>
                 )}
                 {lead.answered && (
@@ -1186,7 +1310,7 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
               <Select
                 value={lead.status}
                 onValueChange={handleSelectChange}
-                disabled={lead.is_archived}
+                disabled={lead.is_deleted}
               >
                 <SelectTrigger className="w-full h-8 text-xs bg-white/50 border-white/20 rounded-lg pointer-events-auto">
                   <SelectValue />

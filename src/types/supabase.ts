@@ -37,9 +37,10 @@ export interface Database {
       leads: {
         Row: {
           created_at: string
+          deleted_at: string | null
           gmail_message_id: string
           id: string
-          is_archived: boolean | null
+          is_deleted: boolean | null
           notes: string | null
           received_at: string
           sender_email: string
@@ -51,9 +52,10 @@ export interface Database {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           gmail_message_id: string
           id?: string
-          is_archived?: boolean | null
+          is_deleted?: boolean | null
           notes?: string | null
           received_at: string
           sender_email: string
@@ -65,9 +67,10 @@ export interface Database {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           gmail_message_id?: string
           id?: string
-          is_archived?: boolean | null
+          is_deleted?: boolean | null
           notes?: string | null
           received_at?: string
           sender_email?: string

@@ -61,10 +61,11 @@ export type Database = {
         Row: {
           answered: boolean | null
           created_at: string
+          deleted_at: string | null
           full_content: string | null
           gmail_message_id: string
           id: string
-          is_archived: boolean | null
+          is_deleted: boolean | null
           notes: string | null
           received_at: string
           responded_at: string | null
@@ -79,10 +80,11 @@ export type Database = {
         Insert: {
           answered?: boolean | null
           created_at?: string
+          deleted_at?: string | null
           full_content?: string | null
           gmail_message_id: string
           id?: string
-          is_archived?: boolean | null
+          is_deleted?: boolean | null
           notes?: string | null
           received_at: string
           responded_at?: string | null
@@ -97,10 +99,11 @@ export type Database = {
         Update: {
           answered?: boolean | null
           created_at?: string
+          deleted_at?: string | null
           full_content?: string | null
           gmail_message_id?: string
           id?: string
-          is_archived?: boolean | null
+          is_deleted?: boolean | null
           notes?: string | null
           received_at?: string
           responded_at?: string | null
