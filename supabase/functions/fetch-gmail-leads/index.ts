@@ -48,33 +48,57 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
+    // Get existing leads to avoid duplicates and ensure consistency
+    const { data: existingLeads } = await supabase
+      .from('leads')
+      .select('gmail_message_id, sender_email, subject')
+      .eq('user_id', user.id);
+
+    const existingMessageIds = new Set(existingLeads?.map(lead => lead.gmail_message_id) || []);
+    console.log(`Found ${existingMessageIds.size} existing leads in database`);
+
     // Fetch both incoming and sent emails
     const leads: LeadData[] = [];
     let totalProcessed = 0;
     let sentEmailsProcessed = 0;
+    let skippedDuplicates = 0;
 
-    // 1. Fetch incoming emails (potential leads)
-    console.log('Fetching incoming emails...');
-    const incomingQuery = `newer_than:7d`;
-    const incomingData = await gmailClient.fetchMessageList(incomingQuery, 30);
+    // 1. Fetch incoming emails (potential leads) with deterministic ordering
+    console.log('Fetching incoming emails with deterministic ordering...');
+    
+    // Use a more specific query with consistent ordering
+    // Fetch emails from last 7 days, excluding automated emails, ordered by date
+    const incomingQuery = `newer_than:7d -from:noreply -from:no-reply -from:donotreply -from:do-not-reply -from:automated -from:notification`;
+    const incomingData = await gmailClient.fetchMessageList(incomingQuery, 50); // Increased limit for better coverage
     console.log('Found incoming messages:', incomingData.messages?.length || 0);
 
     if (incomingData.messages && incomingData.messages.length > 0) {
-      const messageLimit = Math.min(incomingData.messages.length, 15);
-      console.log(`Processing ${messageLimit} incoming messages with AI classification...`);
+      // Sort messages by ID for deterministic processing order
+      const sortedMessages = incomingData.messages.sort((a, b) => a.id.localeCompare(b.id));
+      const messageLimit = Math.min(sortedMessages.length, 25); // Increased processing limit
+      console.log(`Processing ${messageLimit} incoming messages with AI classification (sorted by ID for consistency)...`);
       
       for (let i = 0; i < messageLimit; i++) {
-        const message = incomingData.messages[i];
+        const message = sortedMessages[i];
         try {
           console.log(`Processing incoming message ${i + 1}/${messageLimit}: ${message.id}`);
+          
+          // Skip if we already have this message
+          if (existingMessageIds.has(message.id)) {
+            console.log(`Skipping duplicate message: ${message.id}`);
+            skippedDuplicates++;
+            continue;
+          }
           
           const messageData = await gmailClient.fetchMessage(message.id);
           const { senderEmail, subject } = extractEmailHeaders(messageData);
           
           console.log(`Processing email: ${subject} (from: ${senderEmail})`);
 
-          if (isAutomatedEmail(senderEmail)) {
-            console.log(`Potential automated email detected: ${senderEmail} - ${subject}`);
+          // Enhanced automated email detection
+          if (isAutomatedEmail(senderEmail) || isAutomatedSubject(subject)) {
+            console.log(`Automated email detected, skipping: ${senderEmail} - ${subject}`);
+            continue;
           }
 
           const body = extractEmailBody(messageData);
@@ -110,32 +134,27 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // 2. Fetch sent emails to track responses
+    // 2. Fetch sent emails to track responses with deterministic ordering
     console.log('Fetching sent emails to track responses...');
     const sentQuery = `in:sent newer_than:7d`;
-    const sentData = await gmailClient.fetchMessageList(sentQuery, 20);
+    const sentData = await gmailClient.fetchMessageList(sentQuery, 30); // Increased limit
     console.log('Found sent messages:', sentData.messages?.length || 0);
 
     if (sentData.messages && sentData.messages.length > 0) {
-      // Get existing leads to match against sent emails
-      const { data: existingLeads } = await supabase
-        .from('leads')
-        .select('id, sender_email, subject, gmail_message_id')
-        .eq('user_id', user.id);
-
-      console.log(`Processing ${sentData.messages.length} sent messages to track responses...`);
+      // Sort sent messages by ID for deterministic processing
+      const sortedSentMessages = sentData.messages.sort((a, b) => a.id.localeCompare(b.id));
       
-      for (const message of sentData.messages) {
+      console.log(`Processing ${sortedSentMessages.length} sent messages to track responses...`);
+      
+      for (const message of sortedSentMessages) {
         try {
           const messageData = await gmailClient.fetchMessage(message.id);
           const { senderEmail: recipientEmail, subject } = extractEmailHeaders(messageData);
           
-          // Check if this sent email is a response to an existing lead
+          // Enhanced matching logic for responses
           const matchingLead = existingLeads?.find(lead => {
             const emailMatch = lead.sender_email.toLowerCase() === recipientEmail.toLowerCase();
-            const subjectMatch = subject.toLowerCase().includes('re:') || 
-                                 lead.subject.toLowerCase().includes(subject.toLowerCase().replace('re:', '').trim()) ||
-                                 subject.toLowerCase().includes(lead.subject.toLowerCase());
+            const subjectMatch = isReplyToSubject(subject, lead.subject || '');
             return emailMatch && subjectMatch;
           });
 
@@ -147,15 +166,16 @@ const handler = async (req: Request): Promise<Response> => {
               .from('leads')
               .update({ 
                 answered: true,
-                answered_at: new Date(parseInt(messageData.internalDate)).toISOString(),
+                responded_at: new Date(parseInt(messageData.internalDate)).toISOString(),
                 updated_at: new Date().toISOString()
               })
-              .eq('id', matchingLead.id);
+              .eq('gmail_message_id', matchingLead.gmail_message_id)
+              .eq('user_id', user.id);
 
             if (updateError) {
               console.error('Error updating lead response status:', updateError);
             } else {
-              console.log(`✓ Marked lead ${matchingLead.id} as answered`);
+              console.log(`✓ Marked lead ${matchingLead.gmail_message_id} as answered`);
               sentEmailsProcessed++;
             }
 
@@ -186,13 +206,15 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Insert new leads into Supabase
+    // Insert new leads into Supabase with better error handling
     if (leads.length > 0) {
+      console.log(`Inserting ${leads.length} new leads...`);
+      
       const { data: insertData, error: insertError } = await supabase
         .from('leads')
         .upsert(leads, { 
           onConflict: 'user_id,gmail_message_id',
-          ignoreDuplicates: true 
+          ignoreDuplicates: false // Changed to false to get better error reporting
         })
         .select();
 
@@ -209,8 +231,17 @@ const handler = async (req: Request): Promise<Response> => {
       new_leads: leads.length,
       responses_tracked: sentEmailsProcessed,
       total_processed: totalProcessed,
+      skipped_duplicates: skippedDuplicates,
       incoming_found: incomingData.messages?.length || 0,
-      sent_found: sentData.messages?.length || 0
+      sent_found: sentData.messages?.length || 0,
+      sync_timestamp: new Date().toISOString(),
+      sync_parameters: {
+        timeframe: '7 days',
+        incoming_query: incomingQuery,
+        sent_query: sentQuery,
+        max_incoming_processed: 25,
+        max_sent_processed: 30
+      }
     };
     
     console.log('=== Function completed successfully ===', result);
@@ -232,5 +263,27 @@ const handler = async (req: Request): Promise<Response> => {
     );
   }
 };
+
+// Helper function to detect automated subjects
+function isAutomatedSubject(subject: string): boolean {
+  const automatedPatterns = [
+    /^(re:|fwd:|fw:)?\s*(unsubscribe|newsletter|notification|alert|reminder|receipt|invoice|confirmation)/i,
+    /^(re:|fwd:|fw:)?\s*(no.?reply|do.?not.?reply|automated|system)/i,
+    /^(re:|fwd:|fw:)?\s*(delivery|bounce|failure|error|warning)/i
+  ];
+  
+  return automatedPatterns.some(pattern => pattern.test(subject));
+}
+
+// Helper function to check if a subject is a reply to another subject
+function isReplyToSubject(sentSubject: string, originalSubject: string): boolean {
+  const cleanSentSubject = sentSubject.toLowerCase().replace(/^(re:|fwd:|fw:)\s*/i, '').trim();
+  const cleanOriginalSubject = originalSubject.toLowerCase().trim();
+  
+  // Check if sent subject contains original subject or vice versa
+  return cleanSentSubject.includes(cleanOriginalSubject) || 
+         cleanOriginalSubject.includes(cleanSentSubject) ||
+         sentSubject.toLowerCase().includes('re:');
+}
 
 serve(handler);
