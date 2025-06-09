@@ -74,7 +74,7 @@ const LeadsPage = () => {
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const { markLeadAsResponded } = useResponseTimeAnalytics();
   const { triggerSuccess } = useConfetti();
-  const { isCanceled } = useSubscriptionStatus();
+  const { hasValidAccess } = useSubscriptionStatus();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -1037,9 +1037,9 @@ const LeadsPage = () => {
         </div>
         
         <SubscriptionOverlay 
-          isVisible={isCanceled}
-          title="Leads Access Suspended"
-          message="Your subscription has been canceled. Reactivate your subscription to continue managing and responding to your leads."
+          isVisible={!hasValidAccess}
+          title="Subscription Required"
+          message="Access to leads requires an active subscription. Choose a plan to start managing and responding to your leads with AI-powered assistance."
         />
       </div>
   );

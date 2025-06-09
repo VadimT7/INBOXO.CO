@@ -46,7 +46,7 @@ const AnalyticsPage = () => {
   const { user, loading: authLoading } = useAuthSession();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const { isCanceled } = useSubscriptionStatus();
+  const { hasValidAccess } = useSubscriptionStatus();
   
   const { 
     leadScores, 
@@ -419,9 +419,9 @@ const AnalyticsPage = () => {
       </div>
       
       <SubscriptionOverlay 
-        isVisible={isCanceled}
-        title="Analytics Access Suspended"
-        message="Your subscription has been canceled. Reactivate your subscription to continue viewing detailed analytics and insights."
+        isVisible={!hasValidAccess}
+        title="Analytics Access Required"
+        message="Access to detailed analytics requires an active subscription. Choose a plan to unlock powerful insights and track your lead performance."
       />
     </div>
   );

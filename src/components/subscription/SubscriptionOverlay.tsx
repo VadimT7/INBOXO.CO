@@ -12,7 +12,7 @@ interface SubscriptionOverlayProps {
 const SubscriptionOverlay = ({ 
   isVisible, 
   title = "Subscription Required",
-  message = "Your subscription has been canceled. Reactivate your subscription to continue using all features." 
+  message = "Access to this feature requires an active subscription. Choose a plan to unlock all features and start growing your business." 
 }: SubscriptionOverlayProps) => {
   const navigate = useNavigate();
 
@@ -46,7 +46,7 @@ const SubscriptionOverlay = ({
               className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3"
             >
               <Crown className="h-5 w-5 mr-2" />
-              Reactivate Subscription
+              Choose a Plan
             </Button>
             
             <Button 

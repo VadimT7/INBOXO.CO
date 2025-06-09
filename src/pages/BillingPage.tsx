@@ -502,8 +502,7 @@ const BillingPage = () => {
                   <div className="flex items-center justify-between p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
                     <div>
                       <h3 className="text-2xl font-bold">{currentPlan.name}</h3>
-                      <p className="text-slate-600">${currentPlan.price}/month</p>
-                      <p className="text-sm text-slate-500 mt-1">{currentPlan.description}</p>
+                      <p className="text-slate-600">{currentPlan.description}</p>
                       
                       {isTrialActive && (
                         <div className="mt-3 flex items-center text-blue-600">
@@ -513,6 +512,49 @@ const BillingPage = () => {
                           </span>
                         </div>
                       )}
+                      
+                      {/* Sync Subscription Button */}
+                      <div className="mt-4">
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            setRefreshingSubscription(true);
+                            try {
+                              const { data: { session } } = await supabase.auth.getSession();
+                              const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manual-sync-subscription`, {
+                                method: 'POST',
+                                headers: {
+                                  'Authorization': `Bearer ${session?.access_token}`,
+                                  'Content-Type': 'application/json',
+                                },
+                              });
+
+                              if (response.ok) {
+                                const result = await response.json();
+                                if (result.success) {
+                                  toast.success('Subscription status synchronized!');
+                                  await loadBillingData();
+                                } else {
+                                  toast.error('No subscription changes found');
+                                }
+                              } else {
+                                toast.error('Failed to sync subscription');
+                              }
+                            } catch (error) {
+                              console.error('Error syncing:', error);
+                              toast.error('Failed to sync subscription');
+                            } finally {
+                              setRefreshingSubscription(false);
+                            }
+                          }}
+                          disabled={refreshingSubscription}
+                          className="bg-white border-blue-200 text-blue-600 hover:bg-blue-50"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          {refreshingSubscription ? 'Syncing...' : 'Sync Subscription'}
+                        </Button>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="text-3xl font-bold text-blue-600">${currentPlan.price}</div>
@@ -575,57 +617,9 @@ const BillingPage = () => {
               >
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <BarChart3 className="h-5 w-5 mr-2" />
-                        Usage & Limits
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={loadBillingData}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Refresh
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={async () => {
-                          setRefreshingSubscription(true);
-                          try {
-                            const { data: { session } } = await supabase.auth.getSession();
-                            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/manual-sync-subscription`, {
-                              method: 'POST',
-                              headers: {
-                                'Authorization': `Bearer ${session?.access_token}`,
-                                'Content-Type': 'application/json',
-                              },
-                            });
-
-                            if (response.ok) {
-                              const result = await response.json();
-                              if (result.success) {
-                                toast.success('Subscription status synchronized!');
-                                await loadBillingData();
-                              } else {
-                                toast.error('No subscription changes found');
-                              }
-                            } else {
-                              toast.error('Failed to sync subscription');
-                            }
-                          } catch (error) {
-                            console.error('Error syncing:', error);
-                            toast.error('Failed to sync subscription');
-                          } finally {
-                            setRefreshingSubscription(false);
-                          }
-                        }}
-                        disabled={refreshingSubscription}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        {refreshingSubscription ? 'Syncing...' : 'Sync Subscription'}
-                      </Button>
+                    <CardTitle className="flex items-center">
+                      <BarChart3 className="h-5 w-5 mr-2" />
+                      Usage & Limits
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">

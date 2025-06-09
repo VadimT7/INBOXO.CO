@@ -7,6 +7,7 @@ interface SubscriptionStatus {
   plan?: string;
   isActive: boolean;
   isCanceled: boolean;
+  hasValidAccess: boolean;
   loading: boolean;
 }
 
@@ -16,6 +17,7 @@ export const useSubscriptionStatus = (): SubscriptionStatus => {
     status: 'free',
     isActive: false,
     isCanceled: false,
+    hasValidAccess: false,
     loading: true,
   });
 
@@ -26,6 +28,7 @@ export const useSubscriptionStatus = (): SubscriptionStatus => {
           status: 'free',
           isActive: false,
           isCanceled: false,
+          hasValidAccess: false,
           loading: false,
         });
         return;
@@ -44,6 +47,7 @@ export const useSubscriptionStatus = (): SubscriptionStatus => {
             status: 'free',
             isActive: false,
             isCanceled: false,
+            hasValidAccess: false,
             loading: false,
           });
           return;
@@ -57,6 +61,7 @@ export const useSubscriptionStatus = (): SubscriptionStatus => {
           plan,
           isActive: status === 'active' || status === 'trial',
           isCanceled: status === 'canceled',
+          hasValidAccess: status === 'active' || status === 'trial',
           loading: false,
         });
       } catch (error) {
@@ -65,6 +70,7 @@ export const useSubscriptionStatus = (): SubscriptionStatus => {
           status: 'free',
           isActive: false,
           isCanceled: false,
+          hasValidAccess: false,
           loading: false,
         });
       }
