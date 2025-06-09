@@ -96,6 +96,9 @@ ${writingStyle?.custom_phrases?.length > 0 ? `- Custom phrases to incorporate: $
 RESPONSE REQUIREMENTS:
 - Tone: ${tone} (professional/friendly/casual)
 - Length: ${length} (short: 50-75 words, medium: 100-150 words, detailed: 200+ words)
+- Generate ONLY the email body content - NO subject line
+- Do NOT include any subject line, headers, or "Re:" prefixes
+- Start directly with the greeting/opening of the email
 - Always include a clear call-to-action
 - Reference specific services/pricing when relevant to the inquiry
 - Highlight unique value propositions when appropriate
@@ -113,6 +116,8 @@ Content: ${emailContent}
 
 ${similarResponses?.length > 0 ? `\nFor context, here are similar responses the user has sent before:\n${similarResponses.map((r: any) => `- ${r.generated_response}`).join('\n')}` : ''}
 
+CRITICAL INSTRUCTION: Generate ONLY the email body content. Do NOT include any subject line or "Re:" prefixes.
+
 INSTRUCTIONS:
 1. Analyze the email content to understand what the sender is looking for
 2. If they're asking about pricing, services, or solutions, reference the specific business context above
@@ -124,6 +129,7 @@ INSTRUCTIONS:
 8. Don't be overly promotional - focus on being helpful first
 9. Use the customer's name (from ${senderEmail} or email content) for personalization throughout
 10. MUST end the email with "Best regards, ${userFullName}" or "Best, ${userFullName}"
+11. IMPORTANT: Start directly with "Dear [Name]," or "Hi [Name]," - NO subject line before that
 
 Generate a response that converts this lead by being genuinely helpful and relevant to their needs.`
 
