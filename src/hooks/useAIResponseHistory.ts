@@ -24,8 +24,8 @@ export const useAIResponseHistory = () => {
   const { user } = useAuthSession();
   const [history, setHistory] = useState<AIResponseHistoryItem[]>([]);
   const [writingStyle, setWritingStyle] = useState<UserWritingStyle>({
-    preferred_tone: 'professional',
-    preferred_length: 'medium',
+    preferred_tone: 'casual',
+    preferred_length: 'short',
     custom_phrases: []
   });
   const [loading, setLoading] = useState(true);

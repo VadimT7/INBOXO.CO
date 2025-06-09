@@ -174,7 +174,7 @@ const OnboardingPage = () => {
           emailSubject: bestLead.subject,
           senderEmail: bestLead.sender_email,
           tone: 'professional',
-          length: 'medium'
+          length: 'short'
         }),
       });
 
