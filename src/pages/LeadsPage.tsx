@@ -53,6 +53,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { AIResponseGenerator } from '@/components/AIResponseGenerator';
 import SubscriptionOverlay from '@/components/subscription/SubscriptionOverlay';
+import { ConfirmationModal } from '@/components/ui/confirmation-modal';
 
 interface Lead {
   id: string;
@@ -90,6 +91,25 @@ const LeadsPage = () => {
   const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Confirmation modal state
+  const [confirmationModal, setConfirmationModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText: string;
+    variant: 'danger' | 'warning' | 'info';
+    onConfirm: () => void;
+    isLoading: boolean;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: '',
+    variant: 'danger',
+    onConfirm: () => {},
+    isLoading: false,
+  });
+
   // Drag and drop state
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
@@ -102,6 +122,36 @@ const LeadsPage = () => {
       },
     })
   );
+
+  // Helper functions for confirmation modals
+  const showConfirmation = (config: {
+    title: string;
+    description: string;
+    confirmText: string;
+    variant?: 'danger' | 'warning' | 'info';
+    onConfirm: () => Promise<void> | void;
+  }) => {
+    setConfirmationModal({
+      isOpen: true,
+      title: config.title,
+      description: config.description,
+      confirmText: config.confirmText,
+      variant: config.variant || 'danger',
+      onConfirm: async () => {
+        setConfirmationModal(prev => ({ ...prev, isLoading: true }));
+        try {
+          await config.onConfirm();
+        } finally {
+          setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
+        }
+      },
+      isLoading: false,
+    });
+  };
+
+  const closeConfirmation = () => {
+    setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
@@ -721,9 +771,13 @@ const LeadsPage = () => {
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                if (confirm('Are you sure you want to permanently delete this lead? This action cannot be undone.')) {
-                                  permanentlyDeleteLead(lead.id);
-                                }
+                                showConfirmation({
+                                  title: 'Delete Forever',
+                                  description: `Are you sure you want to permanently delete the lead from ${lead.sender_email}? This action cannot be undone.`,
+                                  confirmText: 'Delete Forever',
+                                  variant: 'danger',
+                                  onConfirm: () => permanentlyDeleteLead(lead.id),
+                                });
                               }}
                               className="text-red-600 hover:text-red-700"
                             >
@@ -1116,9 +1170,13 @@ const LeadsPage = () => {
                           variant="outline"
                           className="text-red-600 hover:text-red-700"
                           onClick={() => {
-                            if (confirm('Are you sure you want to permanently delete this lead? This action cannot be undone.')) {
-                              permanentlyDeleteLead(selectedLead.id);
-                            }
+                            showConfirmation({
+                              title: 'Delete Forever',
+                              description: 'Are you sure you want to permanently delete this lead? This action cannot be undone and the lead will be lost forever.',
+                              confirmText: 'Delete Forever',
+                              variant: 'danger',
+                              onConfirm: () => permanentlyDeleteLead(selectedLead.id),
+                            });
                           }}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
@@ -1126,18 +1184,22 @@ const LeadsPage = () => {
                         </Button>
                       </>
                     ) : (
-                      <Button
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this lead?')) {
-                            deleteLead(selectedLead.id);
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
+                                          <Button
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => {
+                        showConfirmation({
+                          title: 'Delete Lead',
+                          description: 'Are you sure you want to delete this lead? You can restore it from Recently Deleted within 30 days.',
+                          confirmText: 'Delete Lead',
+                          variant: 'warning',
+                          onConfirm: () => deleteLead(selectedLead.id),
+                        });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
                     )}
                   </div>
                   
@@ -1164,6 +1226,18 @@ const LeadsPage = () => {
           isVisible={!hasValidAccess}
           title="Subscription Required"
           message="Access to leads requires an active subscription. Choose a plan to start managing and responding to your leads with AI-powered assistance."
+        />
+
+        {/* Beautiful Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={confirmationModal.isOpen}
+          onClose={closeConfirmation}
+          onConfirm={confirmationModal.onConfirm}
+          title={confirmationModal.title}
+          description={confirmationModal.description}
+          confirmText={confirmationModal.confirmText}
+          variant={confirmationModal.variant}
+          isLoading={confirmationModal.isLoading}
         />
       </div>
   );
