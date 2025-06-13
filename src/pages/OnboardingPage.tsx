@@ -568,6 +568,72 @@ Founder, InboxFlow`;
               >
                 This is just the beginning. Imagine having AI handle ALL your leads like this...
               </motion.p>
+
+              {/* Show the actual lead and AI response - ALWAYS SHOW */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.9 }}
+                className="max-w-4xl mx-auto mb-8 space-y-4"
+              >
+                {/* Original Lead */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center space-x-2">
+                        <Mail className="h-4 w-4 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-600">Original Lead</span>
+                      </div>
+                      <Badge variant="destructive" className="bg-red-500">
+                        <Flame className="h-3 w-3 mr-1" />
+                        HOT
+                      </Badge>
+                    </div>
+                    <div className="bg-blue-50 rounded-lg p-3">
+                      <p className="text-sm font-medium text-slate-900">
+                        From: {selectedLead?.sender_email || 'sarah.johnson@techstartup.com'}
+                      </p>
+                      <p className="text-xs text-slate-600 mb-2">
+                        Subject: {selectedLead?.subject || 'Interested in your lead management solution'}
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        {selectedLead?.snippet || 'Hi! I came across your website and I\'m really interested in learning more about how your platform could help our growing sales team manage leads more effectively. We\'re currently handling about 200 leads per month manually and it\'s becoming overwhelming. Could we schedule a quick call to discuss pricing and features?'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* AI Response */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center mb-3">
+                      <Bot className="h-4 w-4 text-blue-600 mr-2" />
+                      <span className="text-sm font-medium text-slate-900">AI Generated Response</span>
+                      <CheckCircle className="h-3 w-3 text-green-500 ml-2" />
+                    </div>
+                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-3">
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">
+                        {aiResponse || `Hi Sarah,
+
+Thank you for reaching out! I'm excited to hear about your interest in our lead management solution.
+
+Based on what you've described, it sounds like you're dealing with exactly the challenges our platform was designed to solve. Managing 200+ leads manually is not only overwhelming but also means you're likely missing opportunities.
+
+Our AI-powered system can help you:
+• Automatically score and prioritize your hottest leads
+• Generate personalized responses in seconds (like this one!)
+• Never miss a follow-up with smart automation
+
+I'd love to show you how this could transform your sales process. Are you available for a quick 15-minute demo this week? I can show you exactly how we'd handle your current lead volume.
+
+Best regards,
+Vadim Tuchila
+Founder, InboxFlow`}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
               
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
