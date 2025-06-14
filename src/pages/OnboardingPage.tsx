@@ -325,8 +325,8 @@ Founder, InboxFlow`;
                   className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-sm"
                 ></motion.div>
                 <p className="text-sm font-medium bg-gradient-to-r from-slate-700 to-slate-600 bg-clip-text text-transparent">
-                  Step {step} of 4 • Getting your first AI response ready...
-                </p>
+            Step {step} of 4 • Getting your first AI response ready...
+          </p>
                 <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
@@ -334,7 +334,7 @@ Founder, InboxFlow`;
                 ></motion.div>
               </div>
             </div>
-          </div>
+        </div>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -445,13 +445,13 @@ Founder, InboxFlow`;
                   className="absolute inset-0 bg-gradient-to-r from-emerald-400/30 to-blue-400/30 rounded-3xl"
                 ></motion.div>
                 <div className="absolute inset-2 bg-white rounded-2xl flex items-center justify-center">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                >
                     <RefreshCw className="h-8 w-8 text-emerald-600" />
-                  </motion.div>
-                </div>
+                </motion.div>
+              </div>
               </motion.div>
               
               <motion.h2 
@@ -498,8 +498,8 @@ Founder, InboxFlow`;
                   
                   <div className="flex justify-center space-x-2 mb-4">
                     {[...Array(4)].map((_, i) => (
-                      <motion.div
-                        key={i}
+                    <motion.div
+                      key={i}
                         animate={{ 
                           scale: [1, 1.4, 1],
                           backgroundColor: [
@@ -515,8 +515,8 @@ Founder, InboxFlow`;
                           delay: i * 0.2 
                         }}
                         className="w-3 h-3 rounded-full shadow-lg"
-                      />
-                    ))}
+                    />
+                  ))}
                   </div>
                 </div>
               </motion.div>
@@ -591,8 +591,8 @@ Founder, InboxFlow`;
                     className="absolute inset-0 opacity-30"
                   />
                   <CardContent className="relative p-6 bg-white/90 backdrop-blur-sm">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-2">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
                         <motion.div
                           animate={{ scale: [1, 1.1, 1] }}
                           transition={{ duration: 2, repeat: Infinity, delay: 0 }}
@@ -609,13 +609,13 @@ Founder, InboxFlow`;
                           className="w-3 h-3 bg-green-500 rounded-full shadow-sm"
                         ></motion.div>
                         <span className="text-sm text-slate-600 ml-2 font-medium">Gmail</span>
-                      </div>
+                    </div>
                       <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
                         <Target className="h-3 w-3 mr-1" />
                         High Intent
-                      </Badge>
-                    </div>
-                    
+                    </Badge>
+                  </div>
+                  
                     <div className="bg-gradient-to-br from-slate-50 to-orange-50 rounded-xl p-4 shadow-inner">
                       <p className="font-semibold text-slate-900 mb-1">
                         From: {selectedLead.sender_email}
@@ -626,104 +626,70 @@ Founder, InboxFlow`;
                       <p className="text-slate-700 leading-relaxed">
                         {selectedLead.snippet}
                       </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </CardContent>
+              </Card>
               </motion.div>
 
-              {/* Beautiful AI Response Section */}
+                            {/* Beautiful AI Response Section */}
               <motion.div
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
                 className="max-w-2xl mx-auto"
               >
-                <Card className="relative overflow-hidden shadow-2xl border-0">
-                  <motion.div
-                    animate={{
-                      background: [
-                        "linear-gradient(45deg, #1e293b, #0f172a)",
-                        "linear-gradient(45deg, #0f172a, #1e293b)"
-                      ]
-                    }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                    className="absolute inset-0"
-                  />
-                  <CardContent className="relative p-6">
+                        <motion.div
+                  animate={{
+                    boxShadow: [
+                      '0 4px 20px 0 rgba(59,130,246,0.08), 15px 0 25px 0 rgba(139,92,246,0.06)',
+                      '0 -4px 25px 0 rgba(139,92,246,0.1), 0 15px 20px 0 rgba(59,130,246,0.08)',
+                      '-15px 0 20px 0 rgba(236,72,153,0.09), 0 -4px 25px 0 rgba(139,92,246,0.06)',
+                      '0 4px 20px 0 rgba(59,130,246,0.08), 15px 0 25px 0 rgba(139,92,246,0.06)'
+                    ]
+                  }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative overflow-visible border-0 ring-2 ring-blue-100 ring-offset-2 ring-offset-white rounded-2xl"
+                >
+                  <CardContent className="relative p-6 bg-white/90 backdrop-blur rounded-2xl z-10">
                     <div className="flex items-center mb-4">
-                      <motion.div
-                        animate={isGenerating ? { scale: [1, 1.1, 1] } : {}}
-                        transition={{ duration: 1, repeat: Infinity }}
-                        className="relative w-12 h-12 mr-4"
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg"></div>
+                      <div className="relative w-12 h-12 mr-4">
+                        <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg"></div>
                         <div className="absolute inset-1 bg-white rounded-lg flex items-center justify-center">
                           <Bot className="h-6 w-6 text-slate-700" />
                         </div>
-                        {isGenerating && (
-                          <motion.div
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
-                          ></motion.div>
-                        )}
-                      </motion.div>
+                      </div>
                       <div>
-                        <h3 className="font-bold text-white text-lg">InboxFlow AI</h3>
+                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">InboxFlow AI</h3>
                         <div className="flex items-center text-sm">
-                          {isGenerating ? (
-                            <>
-                              <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 1, repeat: Infinity }}
-                              >
-                                <Loader2 className="h-3 w-3 mr-1 text-blue-400" />
-                              </motion.div>
-                              <span className="text-blue-400 font-medium">Generating response...</span>
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-3 w-3 text-emerald-400 mr-1" />
-                              <span className="text-emerald-400 font-medium">Response ready</span>
-                            </>
-                          )}
-                        </div>
+                          <CheckCircle className="h-3 w-3 mr-1 text-emerald-500" />
+                          <span className="font-medium text-emerald-600">Generated in 2.3 seconds</span>
+                    </div>
                       </div>
                     </div>
-                    
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="relative bg-white rounded-xl p-6 shadow-inner min-h-[200px] overflow-hidden"
-                    >
-                      <motion.div
-                        animate={{
-                          background: [
-                            "linear-gradient(45deg, #f8fafc, #f1f5f9)",
-                            "linear-gradient(45deg, #f1f5f9, #f8fafc)"
-                          ]
-                        }}
-                        transition={{ duration: 3, repeat: Infinity }}
-                        className="absolute inset-0 opacity-50"
-                      />
-                      <div className="relative">
-                        {aiResponse && (
-                          <TypewriterText 
-                            text={aiResponse} 
-                            onComplete={() => {
-                              setTimeout(() => {
-                                setStep(4);
-                                setProgress(100);
-                                triggerCelebration();
-                              }, 1000);
-                            }}
-                          />
-                        )}
-                      </div>
-                    </motion.div>
-                  </CardContent>
-                </Card>
+                    <div className="bg-white/95 rounded-xl p-6 shadow-inner">
+                      <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
+                        {aiResponse || `Hi Sarah,
+
+Thank you for reaching out! I'm excited to hear about your interest in our lead management solution.
+
+Based on what you've described, it sounds like you're dealing with exactly the challenges our platform was designed to solve. Managing 200+ leads manually is not only overwhelming but also means you're likely missing opportunities.
+
+Our AI-powered system can help you:
+• Automatically score and prioritize your hottest leads
+• Generate personalized responses in seconds (like this one!)
+• Never miss a follow-up with smart automation
+
+I'd love to show you how this could transform your sales process. Are you available for a quick 15-minute demo this week? I can show you exactly how we'd handle your current lead volume.
+
+Best regards,
+Vadim Tuchila
+Founder, InboxFlow`}
+                      </p>
+                  </div>
+                </CardContent>
+                  {/* Watermark Bot icon */}
+                  <Bot className="absolute right-6 bottom-6 w-32 h-32 text-blue-200 opacity-10 pointer-events-none select-none z-0" />
+                </motion.div>
               </motion.div>
             </motion.div>
           )}
@@ -762,7 +728,7 @@ Founder, InboxFlow`;
                   Here's what happened in the last 30 seconds...
                 </p>
               </motion.div>
-
+              
               {/* Step 2: Here is the lead */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -823,18 +789,19 @@ Founder, InboxFlow`;
                 <h2 className="text-2xl font-semibold text-slate-900 mb-4">
                   2. <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">InboxFlow's AI Response</span>
                 </h2>
-                <Card className="relative overflow-hidden shadow-xl border-0">
-                  <motion.div
-                    animate={{
-                      background: [
-                        "linear-gradient(45deg, #1e293b, #334155)",
-                        "linear-gradient(45deg, #334155, #1e293b)"
-                      ]
-                    }}
-                    transition={{ duration: 5, repeat: Infinity }}
-                    className="absolute inset-0"
-                  />
-                  <CardContent className="relative p-6">
+                <motion.div
+                  animate={{
+                    boxShadow: [
+                      '0 4px 20px 0 rgba(59,130,246,0.08), 15px 0 25px 0 rgba(139,92,246,0.06)',
+                      '0 -4px 25px 0 rgba(139,92,246,0.1), 0 15px 20px 0 rgba(59,130,246,0.08)',
+                      '-15px 0 20px 0 rgba(236,72,153,0.09), 0 -4px 25px 0 rgba(139,92,246,0.06)',
+                      '0 4px 20px 0 rgba(59,130,246,0.08), 15px 0 25px 0 rgba(139,92,246,0.06)'
+                    ]
+                  }}
+                  transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+                  className="relative overflow-visible border-0 ring-2 ring-blue-100 ring-offset-2 ring-offset-white rounded-2xl"
+                >
+                  <CardContent className="relative p-6 bg-white/90 backdrop-blur rounded-2xl z-10">
                     <div className="flex items-center mb-4">
                       <div className="relative w-12 h-12 mr-4">
                         <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg"></div>
@@ -843,15 +810,14 @@ Founder, InboxFlow`;
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-bold text-white text-lg">InboxFlow AI</h3>
-                        <div className="flex items-center text-sm text-emerald-400">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          <span className="font-medium">Generated in 2.3 seconds</span>
+                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">InboxFlow AI</h3>
+                        <div className="flex items-center text-sm">
+                          <CheckCircle className="h-3 w-3 mr-1 text-emerald-500" />
+                          <span className="font-medium text-emerald-600">Generated in 2.3 seconds</span>
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="bg-white rounded-xl p-6 shadow-inner">
+                    <div className="bg-white/95 rounded-xl p-6 shadow-inner">
                       <p className="text-slate-700 leading-relaxed whitespace-pre-wrap">
                         {aiResponse || `Hi Sarah,
 
@@ -872,9 +838,11 @@ Founder, InboxFlow`}
                       </p>
                     </div>
                   </CardContent>
-                </Card>
+                  {/* Watermark Bot icon */}
+                  <Bot className="absolute right-6 bottom-6 w-32 h-32 text-blue-200 opacity-10 pointer-events-none select-none z-0" />
+                </motion.div>
               </motion.div>
-
+              
               {/* Step 4: These leads convert by 85% */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -915,7 +883,7 @@ Founder, InboxFlow`}
                   </CardContent>
                 </Card>
               </motion.div>
-
+              
               {/* Step 5: The offer */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -943,36 +911,36 @@ Founder, InboxFlow`}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="flex-1"
-                  >
-                    <Button 
-                      size="lg" 
-                      onClick={handleSendResponse}
+              >
+                <Button 
+                  size="lg" 
+                  onClick={handleSendResponse}
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg py-6 shadow-lg"
-                    >
-                      <Send className="h-5 w-5 mr-2" />
-                      Send This Response
-                    </Button>
+                >
+                  <Send className="h-5 w-5 mr-2" />
+                  Send This Response
+                </Button>
                   </motion.div>
-                  
+                
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="flex-1"
                   >
-                    <Button 
-                      size="lg" 
-                      onClick={handleSeeAllFeatures}
+                <Button 
+                  size="lg" 
+                  onClick={handleSeeAllFeatures}
                       className="w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-lg py-6 shadow-lg"
-                    >
+                >
                       <Zap className="h-5 w-5 mr-2" />
                       Unlock All Your Leads
-                    </Button>
+                </Button>
                   </motion.div>
-                </motion.div>
-
+              </motion.div>
+              
                 <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
                   transition={{ delay: 1.4 }}
                   className="text-sm text-slate-500 space-y-1"
                 >
