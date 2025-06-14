@@ -55,9 +55,9 @@ const OnboardingPage = () => {
     // Prevent restart if we're already past step 1
     if (step > 1) return;
     
-    // Step 1: Welcome (2 seconds)
+    // Step 1: Welcome (5 seconds)
     setProgress(10);
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 5000));
     
     // Step 2: Start Gmail sync
     setStep(2);
@@ -306,14 +306,36 @@ Founder, InboxFlow`;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-8 pt-28">
         {/* Progress Bar */}
-        <div className="mb-8">
-          <Progress value={progress} className="h-2" />
-          <p className="text-sm text-slate-600 mt-2 text-center">
-            Step {step} of 4 • Getting your first AI response ready...
-          </p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-12 relative"
+        >
+          <div className="relative bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-indigo-500/10 rounded-2xl"></div>
+            <div className="relative">
+              <Progress value={progress} className="h-3 mb-4" />
+              <div className="flex items-center justify-center space-x-2">
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full shadow-sm"
+                ></motion.div>
+                <p className="text-sm font-medium bg-gradient-to-r from-slate-700 to-slate-600 bg-clip-text text-transparent">
+                  Step {step} of 4 • Getting your first AI response ready...
+                </p>
+                <motion.div
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                  className="w-2 h-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full shadow-sm"
+                ></motion.div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
 
         <AnimatePresence mode="wait">
           {/* Step 1: Beautiful Welcome */}
@@ -881,13 +903,13 @@ Founder, InboxFlow`}
                       transition={{ type: "spring", delay: 0.2 }}
                       className="text-6xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-4"
                     >
-                      85%
+                      92%
                     </motion.div>
                     <p className="text-xl font-bold text-green-800 mb-3">
                       Conversion Rate
                     </p>
                     <p className="text-green-700 text-lg">
-                      Leads who receive AI responses like this convert 85% of the time.
+                      Leads who receive AI responses like this convert 92% of the time.
                       That's <span className="font-bold text-emerald-800">17x higher</span> than industry average.
                     </p>
                   </CardContent>
