@@ -291,19 +291,19 @@ const CustomersPage = () => {
       {/* Hero Section */}
       <div className="relative bg-slate-900 text-white overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 to-indigo-900 opacity-90" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-10">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 mt-8">
               Customer Success{' '}
               <span className="bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
                 Stories
               </span>
             </h1>
-            <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto mt-8 mb-12">
               See how leading companies are transforming their lead management and
               achieving remarkable results with InboxFlow.
             </p>
