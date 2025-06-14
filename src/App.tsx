@@ -24,6 +24,7 @@ import PrivateRoute from "./components/auth/PrivateRoute";
 import SubscriptionGuard from "./components/auth/SubscriptionGuard";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { Analytics } from "@vercel/analytics/react"
 
 const queryClient = new QueryClient();
 
@@ -128,6 +129,7 @@ const App = () => (
           <Footer />
         </div>
       </BrowserRouter>
+      <Analytics />
     </TooltipProvider>
   </QueryClientProvider>
 );
