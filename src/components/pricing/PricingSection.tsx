@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { createCheckoutSession } from '@/lib/stripe';
+import { createCheckoutSession, startFreeTrial } from '@/lib/stripe';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -23,7 +23,7 @@ const plans = [
       "1 team member"
     ],
     highlighted: false,
-    cta: "Start Free Trial"
+    cta: "Start 14-Day Free Trial"
   },
   {
     name: "Professional",
@@ -40,11 +40,11 @@ const plans = [
       "API access"
     ],
     highlighted: true,
-    cta: "Start Free Trial"
+    cta: "Start 14-Day Free Trial"
   },
   {
     name: "Enterprise",
-    price: "299",
+    price: "Contact Sales",
     priceId: "price_1RUAHbR4VctRXueqklf7r7hi",
     description: "For large organizations",
     features: [
@@ -200,12 +200,23 @@ const PricingSection = () => {
 
     try {
       setIsLoading(true);
-      await createCheckoutSession(plan.priceId);
+      
+      // Start free trial directly (no credit card required)
+      await startFreeTrial(plan.name);
+      
+      toast({
+        title: "🎉 Trial Started!",
+        description: `Your 14-day free trial of ${plan.name} has begun. No credit card required!`,
+      });
+      
+      // Redirect to leads page or dashboard
+      navigate('/leads');
+      
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('Error starting trial:', error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again later.",
+        description: "Something went wrong starting your trial. Please try again later.",
         variant: "destructive",
       });
     } finally {

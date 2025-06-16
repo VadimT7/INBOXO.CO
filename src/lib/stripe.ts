@@ -269,3 +269,91 @@ export const deleteAccount = async () => {
     throw err;
   }
 };
+
+// Start a free trial directly (no Stripe required)
+export const startFreeTrial = async (planName: string) => {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update user profile to start trial
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        id: user.id,
+        subscription_status: 'trial',
+        subscription_plan: planName.toLowerCase(),
+        trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
+        subscription_created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        // Clear any existing Stripe data
+        stripe_customer_id: null,
+        stripe_subscription_id: null
+      });
+
+    if (error) {
+      console.error('Error starting trial:', error);
+      throw new Error('Failed to start trial');
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Error in startFreeTrial:', err);
+    throw err;
+  }
+};
+
+// Upgrade from trial to paid subscription (uses Stripe)
+export const upgradeFromTrial = async (priceId: string) => {
+  try {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    console.log('Upgrading from trial to paid subscription:', priceId);
+
+    // Use the existing Stripe checkout session creation
+    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/create-checkout-session', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.data.session.access_token}`,
+      },
+      body: JSON.stringify({
+        priceId,
+        mode: 'subscription', // Skip trial since they're already on trial
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create checkout session');
+    }
+
+    const { sessionId } = await response.json();
+    const stripe = await stripePromise;
+
+    if (!stripe) {
+      throw new Error('Stripe failed to initialize');
+    }
+
+    const { error } = await stripe.redirectToCheckout({
+      sessionId,
+    });
+
+    if (error) {
+      throw error;
+    }
+  } catch (err) {
+    console.error('Error in upgradeFromTrial:', err);
+    throw err;
+  }
+};

@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Check, Loader2, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { createCheckoutSession } from '@/lib/stripe';
+import { createCheckoutSession, startFreeTrial } from '@/lib/stripe';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuthSession } from '@/hooks/useAuthSession';
@@ -23,7 +23,7 @@ const plans = [
       "1 team member"
     ],
     highlighted: false,
-    cta: "Start Free Trial"
+    cta: "Start 14-Day Free Trial"
   },
   {
     name: "Professional",
@@ -40,11 +40,11 @@ const plans = [
       "API access"
     ],
     highlighted: true,
-    cta: "Start Free Trial"
+    cta: "Start 14-Day Free Trial"
   },
   {
     name: "Enterprise",
-    price: "299",
+    price: "999",
     priceId: "price_1RUAHbR4VctRXueqklf7r7hi",
     description: "For large organizations",
     features: [
@@ -213,12 +213,24 @@ const SubscriptionPage = () => {
 
     try {
       setIsLoading(true);
-      await createCheckoutSession(plan.priceId);
+      
+      // Start free trial directly (no credit card required)
+      await startFreeTrial(plan.name);
+      
+      toast({
+        title: "🎉 Trial Started!",
+        description: `Your 14-day free trial of ${plan.name} has begun. No credit card required!`,
+      });
+      
+      // Mark trial as started and redirect
+      localStorage.setItem('subscriptionPageSeen', 'true');
+      navigate('/leads');
+      
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('Error starting trial:', error);
       toast({
         title: "Error",
-        description: "Something went wrong. Please try again later.",
+        description: "Something went wrong starting your trial. Please try again later.",
         variant: "destructive",
       });
     } finally {
@@ -254,13 +266,13 @@ const SubscriptionPage = () => {
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
               {localStorage.getItem('hasSeenOnboarding') 
-                ? 'You just saw the magic! Choose your plan to get AI responses for every lead.'
-                : 'Choose your plan to start your 14-day free trial and unlock the full power of automated lead management.'
+                ? 'You just saw the magic! Start your free trial now - no credit card required!'
+                : 'Start your 14-day free trial instantly and unlock the full power of automated lead management.'
               }
             </p>
             <div className="bg-blue-700/30 backdrop-blur-sm rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-blue-100">
-                ✅ 14-day free trial • ✅ No credit card required to start • ✅ Cancel anytime
+                ✅ 14-day free trial • ✅ No credit card required • ✅ Start in seconds • ✅ Cancel anytime
               </p>
             </div>
           </motion.div>
@@ -282,7 +294,7 @@ const SubscriptionPage = () => {
         </div>
 
         {/* Skip option */}
-        <motion.div 
+        {/* <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
@@ -302,7 +314,7 @@ const SubscriptionPage = () => {
           <p className="text-xs text-slate-500 mt-2">
             You can upgrade anytime from your settings
           </p>
-        </motion.div>
+        </motion.div> */}
       </div>
 
       <EnterpriseContactDialog
