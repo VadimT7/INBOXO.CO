@@ -1131,8 +1131,8 @@ const SettingsPage = () => {
                                 {' '}({getTrialDaysRemaining()} days remaining)
                               </p>
                               <p className="text-sm text-green-600">
-                                After your trial ends, your {getCurrentPlan().name} subscription will automatically continue at ${getCurrentPlan().price}/month. 
-                                You can cancel anytime before {formatDate(subscriptionData!.trial_ends_at!)} to avoid charges.
+                                Your trial will end on {formatDate(subscriptionData!.trial_ends_at!)}. 
+                                To continue using {getCurrentPlan().name} features, you'll need to add a payment method and upgrade to a paid plan.
                               </p>
                             </div>
                           </div>

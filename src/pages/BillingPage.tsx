@@ -518,8 +518,8 @@ const BillingPage = () => {
                             {' '}({Math.max(0, Math.ceil((new Date(subscriptionData!.trial_ends_at!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days remaining)
                           </p>
                           <p className="text-sm text-green-600">
-                            After your trial ends, your {currentPlan.name} subscription will automatically continue at ${currentPlan.price}/month. 
-                            You can cancel anytime before {formatDate(subscriptionData!.trial_ends_at!)} to avoid charges.
+                            Your trial will end on {formatDate(subscriptionData!.trial_ends_at!)}. 
+                            To continue using {currentPlan.name} features, you'll need to add a payment method and upgrade to a paid plan.
                           </p>
                         </div>
                       </div>
