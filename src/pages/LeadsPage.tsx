@@ -19,6 +19,8 @@ import {
 import { useGmailSync } from '@/hooks/useGmailSync';
 import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
+import { useAutoReply } from '@/hooks/useAutoReply';
+import { AutoReplyToggle } from '@/components/AutoReplyToggle';
 import { toast } from 'sonner';
 import { 
   RefreshCw, Mail, Search, Filter, Zap, Target, Trophy, Star,
@@ -68,6 +70,8 @@ interface Lead {
   responded_at?: string | null;
   response_time_minutes?: number | null;
   answered?: boolean;
+  auto_replied?: boolean;
+  gmail_reply_id?: string;
   sort_order?: number;
 }
 
@@ -77,6 +81,7 @@ const LeadsPage = () => {
   const { markLeadAsResponded } = useResponseTimeAnalytics();
   const { triggerSuccess } = useConfetti();
   const { hasValidAccess } = useSubscriptionStatus();
+  const { sendAutoReply } = useAutoReply();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [allLeads, setAllLeads] = useState<Lead[]>([]); // Store all leads (active + deleted)
@@ -293,7 +298,30 @@ const LeadsPage = () => {
     }
   };
 
-
+  // Process new leads for auto-reply
+  const processNewLeadsForAutoReply = async (newLeads: Lead[]) => {
+    if (!newLeads.length) return;
+    
+    console.log('Processing new leads for auto-reply:', newLeads.length);
+    
+    // Only process leads that haven't been answered yet and haven't been auto-replied to
+    const unansweredLeads = newLeads.filter(lead => !lead.answered && !lead.auto_replied);
+    
+    for (const lead of unansweredLeads) {
+      // Only auto-reply to hot and warm leads for safety
+      if (lead.status === 'hot' || lead.status === 'warm') {
+        const success = await sendAutoReply(lead);
+        if (success) {
+          // Update local state to reflect the change
+          setAllLeads(prev => prev.map(l => 
+            l.id === lead.id 
+              ? { ...l, answered: true, auto_replied: true, responded_at: new Date().toISOString() }
+              : l
+          ));
+        }
+      }
+    }
+  };
 
   const deleteLead = async (leadId: string) => {
     try {
@@ -427,8 +455,26 @@ const LeadsPage = () => {
   const handleSyncGmail = async () => {
     try {
       console.log('Starting Gmail sync from LeadsPage...');
+      const oldLeadsCount = allLeads.filter(l => !l.is_deleted).length;
+      
       await syncGmailLeads();
       await fetchLeads();
+      
+      // Get new leads count after sync
+      const newLeadsCount = allLeads.filter(l => !l.is_deleted).length;
+      const newLeadsFound = newLeadsCount - oldLeadsCount;
+      
+      if (newLeadsFound > 0) {
+        // Get the newest leads for auto-reply processing
+        const newestLeads = allLeads
+          .filter(l => !l.is_deleted)
+          .sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())
+          .slice(0, newLeadsFound);
+        
+        // Process new leads for auto-reply
+        await processNewLeadsForAutoReply(newestLeads);
+      }
+      
       toast.success('📧 Fresh leads synced!');
     } catch (error) {
       console.error('Gmail sync error in LeadsPage:', error);
@@ -498,7 +544,7 @@ const LeadsPage = () => {
       setAllLeads([]);
       setLoading(false);
     }
-  }, [authLoading, user?.id]);
+  }, [authLoading, user]);
 
   useEffect(() => {
     // Reset showFullContent and showAIResponse when modal opens/closes or lead changes
@@ -692,6 +738,9 @@ const LeadsPage = () => {
                 <Trash2 className="h-4 w-4 mr-2" />
                 {showDeleted ? 'Show Active' : 'Recently Deleted'}
               </Button>
+              
+              {/* Auto-Reply Toggle */}
+              {!showDeleted && <AutoReplyToggle />}
               
               <Button
                 onClick={handleSyncGmail}

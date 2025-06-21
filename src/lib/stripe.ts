@@ -54,8 +54,9 @@ export const createCheckoutSession = async (priceId: string) => {
     console.log('Session data:', session.data);
     console.log('Session access token:', session.data.session?.access_token);
 
-    // Use correct Supabase project URL
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/create-checkout-session', {
+    // Use environment variable for Supabase URL
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -109,7 +110,8 @@ export const fetchBillingHistory = async () => {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/get-billing-history', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/get-billing-history`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -135,7 +137,8 @@ export const fetchPaymentMethods = async (): Promise<{ payment_methods: PaymentM
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/get-payment-methods', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/get-payment-methods`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -162,7 +165,8 @@ export const fetchUsageData = async (): Promise<UsageData> => {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/get-usage-data', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/get-usage-data`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -198,7 +202,8 @@ export const cancelSubscription = async () => {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/cancel-subscription', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/cancel-subscription`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -224,7 +229,8 @@ export const createPortalSession = async () => {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/create-portal-session', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-portal-session`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -251,7 +257,8 @@ export const deleteAccount = async () => {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/delete-account', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/delete-account`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${session.data.session.access_token}`,
@@ -321,7 +328,8 @@ export const upgradeFromTrial = async (priceId: string) => {
     console.log('Upgrading from trial to paid subscription:', priceId);
 
     // Use the existing Stripe checkout session creation
-    const response = await fetch('https://yqedmsoldwhkczbkxhqo.supabase.co/functions/v1/create-checkout-session', {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://yqedmsoldwhkczbkxhqo.supabase.co';
+    const response = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

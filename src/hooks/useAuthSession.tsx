@@ -24,7 +24,7 @@ export function useAuthSession(): AuthSession {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/leads`,
-          scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
+          scopes: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
           queryParams: {
             access_type: 'offline',
             prompt: 'consent'
