@@ -21,6 +21,11 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== Gmail Leads Fetch Function Started ===');
     
+    // Get sync period from request body
+    const body = await req.json().catch(() => ({}));
+    const syncPeriod = body.period || 7; // Default to 7 days if not specified
+    console.log(`Sync period: ${syncPeriod} days`);
+    
     // Validate user
     const user = await validateUser(req.headers.get('Authorization'));
     
@@ -62,26 +67,28 @@ const handler = async (req: Request): Promise<Response> => {
     let totalProcessed = 0;
     let sentEmailsProcessed = 0;
     let skippedDuplicates = 0;
+    let skippedPromotional = 0;
+    let processedMessagesCount = 0;
 
     // 1. Fetch incoming emails (potential leads) with deterministic ordering
     console.log('Fetching incoming emails with deterministic ordering...');
     
-    // Use a more specific query with consistent ordering
-    // Fetch emails from last 7 days, excluding automated emails, ordered by date
-    const incomingQuery = `newer_than:7d -from:noreply -from:no-reply -from:donotreply -from:do-not-reply -from:automated -from:notification`;
-    const incomingData = await gmailClient.fetchMessageList(incomingQuery, 50); // Increased limit for better coverage
+    // Use a more inclusive query - only exclude very specific automated patterns
+    // Don't exclude personal emails or potential leads
+    const incomingQuery = `newer_than:${syncPeriod}d -from:mailer-daemon -from:postmaster`;
+    const incomingData = await gmailClient.fetchMessageList(incomingQuery, 500); // Increased limit significantly
     console.log('Found incoming messages:', incomingData.messages?.length || 0);
 
     if (incomingData.messages && incomingData.messages.length > 0) {
       // Sort messages by ID for deterministic processing order
       const sortedMessages = incomingData.messages.sort((a, b) => a.id.localeCompare(b.id));
-      const messageLimit = Math.min(sortedMessages.length, 25); // Increased processing limit
-      console.log(`Processing ${messageLimit} incoming messages with AI classification (sorted by ID for consistency)...`);
+      console.log(`Processing ALL ${sortedMessages.length} incoming messages with AI classification...`);
+      processedMessagesCount = sortedMessages.length;
       
-      for (let i = 0; i < messageLimit; i++) {
+      for (let i = 0; i < sortedMessages.length; i++) {
         const message = sortedMessages[i];
         try {
-          console.log(`Processing incoming message ${i + 1}/${messageLimit}: ${message.id}`);
+          console.log(`Processing incoming message ${i + 1}/${sortedMessages.length}: ${message.id}`);
           
           // Skip if we already have this message
           if (existingMessageIds.has(message.id)) {
@@ -98,6 +105,13 @@ const handler = async (req: Request): Promise<Response> => {
           // Enhanced automated email detection
           if (isAutomatedEmail(senderEmail) || isAutomatedSubject(subject)) {
             console.log(`Automated email detected, skipping: ${senderEmail} - ${subject}`);
+            continue;
+          }
+
+          // Quick pre-check for obviously promotional emails to save API costs
+          if (isObviouslyPromotional(subject, senderEmail)) {
+            console.log(`Obviously promotional email detected, skipping: ${subject}`);
+            skippedPromotional++;
             continue;
           }
 
@@ -136,8 +150,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // 2. Fetch sent emails to track responses with deterministic ordering
     console.log('Fetching sent emails to track responses...');
-    const sentQuery = `in:sent newer_than:7d`;
-    const sentData = await gmailClient.fetchMessageList(sentQuery, 30); // Increased limit
+    const sentQuery = `in:sent newer_than:${syncPeriod}d`;
+    const sentData = await gmailClient.fetchMessageList(sentQuery, 100); // Increased limit
     console.log('Found sent messages:', sentData.messages?.length || 0);
 
     if (sentData.messages && sentData.messages.length > 0) {
@@ -232,15 +246,16 @@ const handler = async (req: Request): Promise<Response> => {
       responses_tracked: sentEmailsProcessed,
       total_processed: totalProcessed,
       skipped_duplicates: skippedDuplicates,
+      skipped_promotional: skippedPromotional,
       incoming_found: incomingData.messages?.length || 0,
       sent_found: sentData.messages?.length || 0,
       sync_timestamp: new Date().toISOString(),
       sync_parameters: {
-        timeframe: '7 days',
+        timeframe: `${syncPeriod} days`,
         incoming_query: incomingQuery,
         sent_query: sentQuery,
-        max_incoming_processed: 25,
-        max_sent_processed: 30
+        max_incoming_processed: processedMessagesCount,
+        max_sent_processed: 100
       }
     };
     
@@ -273,6 +288,44 @@ function isAutomatedSubject(subject: string): boolean {
   ];
   
   return automatedPatterns.some(pattern => pattern.test(subject));
+}
+
+// Quick pre-check for obviously promotional emails to save API costs
+function isObviouslyPromotional(subject: string, senderEmail: string): boolean {
+  const lowerSubject = subject.toLowerCase();
+  const lowerEmail = senderEmail.toLowerCase();
+  
+  // Check for obvious promotional patterns in subject
+  const promotionalSubjectPatterns = [
+    'sale', 'discount', '% off', 'free shipping', 'limited time',
+    'giveaway', 'contest', 'winner', 'anniversary', 'years of',
+    'newsletter', 'update from', 'new features', 'product announcement',
+    'black friday', 'cyber monday', 'flash sale', 'exclusive offer'
+  ];
+  
+  // Check for promotional sender patterns
+  const promotionalSenderPatterns = [
+    'noreply@', 'no-reply@', 'newsletter@', 'marketing@', 'promo@',
+    'updates@', 'notifications@', 'hello@', 'team@', 'support@',
+    '.shopify.com', '.mailchimp.', '.constantcontact.', '.sendgrid.',
+    'amazonses.com', 'mailgun.org'
+  ];
+  
+  // Check subject
+  for (const pattern of promotionalSubjectPatterns) {
+    if (lowerSubject.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  // Check sender
+  for (const pattern of promotionalSenderPatterns) {
+    if (lowerEmail.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 // Helper function to check if a subject is a reply to another subject

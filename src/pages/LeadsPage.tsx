@@ -57,6 +57,12 @@ import { CSS } from '@dnd-kit/utilities';
 import { AIResponseGenerator } from '@/components/AIResponseGenerator';
 import SubscriptionOverlay from '@/components/subscription/SubscriptionOverlay';
 import { ConfirmationModal } from '@/components/ui/confirmation-modal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Lead {
   id: string;
@@ -619,33 +625,13 @@ const LeadsPage = () => {
     }
   };
 
-  const handleSyncGmail = async () => {
+  const handleSyncGmail = async (period: number = 7) => {
     try {
-      console.log('Starting Gmail sync from LeadsPage...');
-      const oldLeadsCount = allLeads.filter(l => !l.is_deleted).length;
-      
-      await syncGmailLeads();
+      setShowDeleted(false); // Switch back to main view when syncing
+      await syncGmailLeads(period);
       await fetchLeads();
-      
-      // Get new leads count after sync
-      const newLeadsCount = allLeads.filter(l => !l.is_deleted).length;
-      const newLeadsFound = newLeadsCount - oldLeadsCount;
-      
-      if (newLeadsFound > 0) {
-        // Get the newest leads for auto-reply processing
-        const newestLeads = allLeads
-          .filter(l => !l.is_deleted)
-          .sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime())
-          .slice(0, newLeadsFound);
-        
-        // Process new leads for auto-reply
-        await processNewLeadsForAutoReply(newestLeads);
-      }
-      
-      toast.success('📧 Fresh leads synced!');
     } catch (error) {
-      console.error('Gmail sync error in LeadsPage:', error);
-      // Error handling is done in the hook
+      console.error('Gmail sync error:', error);
     }
   };
 
@@ -938,14 +924,29 @@ const LeadsPage = () => {
               {/* Auto-Reply Toggle */}
               {!showDeleted && <AutoReplyToggle />}
               
-              <Button
-                onClick={handleSyncGmail}
-                disabled={syncLoading}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-                Sync Gmail
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    disabled={syncLoading}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+                    Sync Gmail
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleSyncGmail(1)}>
+                    Last 24 hours
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSyncGmail(3)}>
+                    Last 3 days
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSyncGmail(7)}>
+                    Last 7 days
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 

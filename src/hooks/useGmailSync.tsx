@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 export function useGmailSync() {
   const [loading, setLoading] = useState(false);
 
-  const syncGmailLeads = async () => {
+  const syncGmailLeads = async (period: number = 7) => {
     setLoading(true);
     try {
-      console.log('Starting Gmail sync...');
+      console.log(`Starting Gmail sync for ${period} days...`);
       
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
@@ -39,6 +39,7 @@ export function useGmailSync() {
       console.log('Google access token found, calling Edge function...');
       
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
+        body: { period },
         headers: {
           Authorization: 'Bearer ' + session.session.access_token,
           'X-Google-Token': session.session.provider_token, // Pass Google token separately
@@ -86,9 +87,12 @@ export function useGmailSync() {
         if (data.responses_tracked > 0) {
           messages.push(`${data.responses_tracked} responses tracked`);
         }
+        if (data.skipped_promotional > 0) {
+          messages.push(`${data.skipped_promotional} promotional emails skipped`);
+        }
         toast.success(`📧 Gmail sync complete: ${messages.join(', ')}!`);
       } else {
-        toast.info('Gmail sync complete - no new leads or responses found');
+        toast.info(`Gmail sync complete - no new leads found in the last ${period} days`);
       }
 
       return data;
