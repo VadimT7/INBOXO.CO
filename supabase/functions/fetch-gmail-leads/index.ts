@@ -4,7 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 import { validateUser } from './auth-handler.ts';
 import { GmailClient } from './gmail-client.ts';
-import { extractEmailBody, extractEmailHeaders, isAutomatedEmail } from './email-parser.ts';
+import { extractEmailBody, extractEmailHeaders, isAutomatedEmail, detectUrgencyLevel } from './email-parser.ts';
 import { classifyEmailWithAI } from './ai-classifier.ts';
 import { LeadData } from './types.ts';
 
@@ -116,10 +116,22 @@ const handler = async (req: Request): Promise<Response> => {
           }
 
           const body = extractEmailBody(messageData);
+          
+          // Detect urgency level
+          const urgency = detectUrgencyLevel(subject, body);
+          console.log(`Urgency detection: ${urgency.level} - indicators: ${urgency.indicators.join(', ')}`);
+          
           console.log(`Analyzing email with AI: ${senderEmail} - ${subject}`);
           
           const aiResult = await classifyEmailWithAI(subject, body, senderEmail);
           console.log(`AI Classification: isLead=${aiResult.isLead}, classification=${aiResult.classification}, confidence=${aiResult.confidence}`);
+          
+          // Override classification if high urgency is detected but AI classified as cold
+          if (urgency.level === 'high' && aiResult.isLead && aiResult.classification === 'cold') {
+            console.log(`⚠️ Overriding cold classification due to high urgency indicators`);
+            aiResult.classification = 'hot';
+            aiResult.reasoning += ' (Upgraded to HOT due to urgency indicators)';
+          }
           
           if (!aiResult.isLead) {
             console.log(`AI classified as non-lead: ${senderEmail} - ${subject}`);
@@ -134,9 +146,10 @@ const handler = async (req: Request): Promise<Response> => {
             sender_email: senderEmail,
             subject: subject,
             snippet: messageData.snippet || body.substring(0, 200),
+            full_content: body, // Include the full email content
             received_at: new Date(parseInt(messageData.internalDate)).toISOString(),
             status: aiResult.classification,
-            notes: `AI Classification: ${aiResult.reasoning} (Confidence: ${aiResult.confidence}%)`
+            notes: `AI Classification: ${aiResult.reasoning} (Confidence: ${aiResult.confidence}%) | Urgency: ${urgency.level}${urgency.indicators.length > 0 ? ' (' + urgency.indicators.join(', ') + ')' : ''}`
           };
 
           leads.push(lead);
@@ -221,6 +234,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Insert new leads into Supabase with better error handling
+    let insertedLeads: any[] = [];
     if (leads.length > 0) {
       console.log(`Inserting ${leads.length} new leads...`);
       
@@ -237,12 +251,14 @@ const handler = async (req: Request): Promise<Response> => {
         throw new Error(`Failed to save leads: ${insertError.message}`);
       }
 
-      console.log('✓ Successfully inserted AI-classified leads:', insertData?.length || 0);
+      insertedLeads = insertData || [];
+      console.log('✓ Successfully inserted AI-classified leads:', insertedLeads.length);
     }
 
     const result = { 
       message: 'Gmail sync completed successfully', 
       new_leads: leads.length,
+      new_leads_data: insertedLeads, // Return the actual new leads
       responses_tracked: sentEmailsProcessed,
       total_processed: totalProcessed,
       skipped_duplicates: skippedDuplicates,

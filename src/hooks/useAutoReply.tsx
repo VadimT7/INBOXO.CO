@@ -108,10 +108,20 @@ export function useAutoReply() {
     try {
       console.log('Generating auto-reply for lead:', lead.id);
 
+      // Get the current session to extract Google token
+      const { data: { session } } = await supabase.auth.getSession();
+      const googleToken = session?.provider_token;
+
+      if (!googleToken) {
+        console.error('No Google token available');
+        toast.error('Please sign out and sign in again with Google to enable auto-reply');
+        return false;
+      }
+
       // First generate the AI response
       const { data: aiResponse, error: aiError } = await supabase.functions.invoke('generate-ai-response', {
         body: {
-          emailContent: lead.snippet || lead.subject,
+          emailContent: lead.full_content || lead.snippet || lead.subject,
           emailSubject: lead.subject,
           senderEmail: lead.sender_email,
           tone: settings.tone,
@@ -126,13 +136,16 @@ export function useAutoReply() {
 
       console.log('AI response generated, sending email...');
 
-      // Send the email
+      // Send the email with Google token
       const { data: emailResult, error: emailError } = await supabase.functions.invoke('send-email-reply', {
         body: {
           leadId: lead.id,
           recipientEmail: lead.sender_email,
           subject: `Re: ${lead.subject}`,
           body: aiResponse.response
+        },
+        headers: {
+          'X-Google-Token': googleToken
         }
       });
 

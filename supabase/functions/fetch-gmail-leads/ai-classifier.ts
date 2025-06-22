@@ -20,23 +20,41 @@ From: ${senderEmail}
 Subject: ${subject}
 Body: ${body}
 
-Is this email someone asking for a quote, service, or information about YOUR business?
-Or is it a promotional/marketing email trying to sell something TO you?
+IMPORTANT CLASSIFICATION FACTORS:
+1. URGENCY - Look for urgent language, time sensitivity, caps lock, exclamation marks
+2. INTENT - Clear request for services, quotes, or information
+3. BUDGET - Mentions of specific budget or price ranges
+4. SPECIFICITY - Detailed requirements or specific questions
+5. TONE - Professional inquiry vs promotional/spam
 
-Examples of LEADS (mark as isLead: true):
-- "Hi, what are your options for roof installation? 20M^2 of surface and metallic?"
-- "I am looking to renovate my roof for 10000 USD for 55 square meters"
-- "Can you provide a quote for plumbing services?"
-- "What's your pricing for landscaping?"
+CLASSIFICATION RULES:
+- HOT LEAD: Urgent requests, specific budgets mentioned, immediate needs, clear buying intent
+- WARM LEAD: General inquiries with interest, asking for quotes, moderate urgency
+- COLD LEAD: Vague interest, just gathering information, no urgency
+- NOT A LEAD: Promotional emails, newsletters, trying to sell TO us
 
-Examples of NON-LEADS (mark as isLead: false):
-- "2 Years of OpusClip. Big updates. Bigger giveaways"
-- "Get 20% off NHL gear"
-- "Your Shopify trial for $1"
-- Any newsletter, promotion, or marketing email
+Examples of HOT LEADS:
+- "URGENT: Need roof repair ASAP, budget $10,000"
+- "Can you start this week? I need immediate help"
+- "Ready to proceed with $5000 budget for your services"
+
+Examples of WARM LEADS:
+- "I'm interested in your services, can you send a quote?"
+- "Looking to renovate next month, what are your rates?"
+- "Please provide pricing for your landscaping services"
+
+Examples of COLD LEADS:
+- "Just browsing your services for future reference"
+- "Might need this someday, what do you offer?"
+- "Gathering information for next year's project"
+
+Examples of NON-LEADS:
+- Marketing emails, newsletters, promotions
+- Emails trying to sell services TO you
+- Automated notifications or system emails
 
 Respond with ONLY this JSON format:
-{"isLead": boolean, "classification": "hot"|"warm"|"cold"|"unclassified", "confidence": 0-100}`;
+{"isLead": boolean, "classification": "hot"|"warm"|"cold"|"unclassified", "confidence": 0-100, "reasoning": "brief explanation"}`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -50,7 +68,7 @@ Respond with ONLY this JSON format:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at identifying genuine business inquiries. Be very strict - only mark emails as leads if someone is clearly asking for services or quotes. Marketing emails, newsletters, and promotions are NEVER leads.'
+            content: 'You are an expert at identifying and classifying business leads. Pay special attention to URGENCY indicators like "URGENT", "ASAP", caps lock, time sensitivity, and immediate needs. These should typically be classified as HOT leads if they show genuine interest. A lead with clear intent and urgency should NEVER be classified as cold.'
           },
           {
             role: 'user',
@@ -58,7 +76,7 @@ Respond with ONLY this JSON format:
           }
         ],
         temperature: 0.1,
-        max_tokens: 150
+        max_tokens: 200
       }),
     });
 

@@ -60,10 +60,12 @@ export type Database = {
       leads: {
         Row: {
           answered: boolean | null
+          auto_replied: boolean | null
           created_at: string
           deleted_at: string | null
           full_content: string | null
           gmail_message_id: string
+          gmail_reply_id: string | null
           id: string
           is_deleted: boolean | null
           notes: string | null
@@ -79,10 +81,12 @@ export type Database = {
         }
         Insert: {
           answered?: boolean | null
+          auto_replied?: boolean | null
           created_at?: string
           deleted_at?: string | null
           full_content?: string | null
           gmail_message_id: string
+          gmail_reply_id?: string | null
           id?: string
           is_deleted?: boolean | null
           notes?: string | null
@@ -98,10 +102,12 @@ export type Database = {
         }
         Update: {
           answered?: boolean | null
+          auto_replied?: boolean | null
           created_at?: string
           deleted_at?: string | null
           full_content?: string | null
           gmail_message_id?: string
+          gmail_reply_id?: string | null
           id?: string
           is_deleted?: boolean | null
           notes?: string | null
@@ -119,7 +125,10 @@ export type Database = {
       }
       profiles: {
         Row: {
-          google_access_token: string | null
+          avatar_url: string | null
+          created_at: string | null
+          emails_sent: number | null
+          full_name: string | null
           id: string
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -127,10 +136,13 @@ export type Database = {
           subscription_plan: string | null
           subscription_status: string | null
           trial_ends_at: string | null
-          updated_at: string
+          updated_at: string | null
         }
         Insert: {
-          google_access_token?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          emails_sent?: number | null
+          full_name?: string | null
           id: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -138,10 +150,13 @@ export type Database = {
           subscription_plan?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Update: {
-          google_access_token?: string | null
+          avatar_url?: string | null
+          created_at?: string | null
+          emails_sent?: number | null
+          full_name?: string | null
           id?: string
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -149,7 +164,7 @@ export type Database = {
           subscription_plan?: string | null
           subscription_status?: string | null
           trial_ends_at?: string | null
-          updated_at?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

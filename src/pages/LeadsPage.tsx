@@ -29,7 +29,7 @@ import {
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
   MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical,
-  ChevronDown, ChevronUp, Square, CheckSquare, X
+  ChevronDown, ChevronUp, Square, CheckSquare, X, Bot, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -88,7 +88,7 @@ const LeadsPage = () => {
   const { markLeadAsResponded } = useResponseTimeAnalytics();
   const { triggerSuccess } = useConfetti();
   const { hasValidAccess } = useSubscriptionStatus();
-  const { sendAutoReply } = useAutoReply();
+  const { sendAutoReply, settings: autoReplySettings } = useAutoReply();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [allLeads, setAllLeads] = useState<Lead[]>([]); // Store all leads (active + deleted)
@@ -412,7 +412,7 @@ const LeadsPage = () => {
     if (!user) {
       setAllLeads([]);
       setLoading(false);
-      return;
+      return [];
     }
 
     try {
@@ -426,13 +426,15 @@ const LeadsPage = () => {
       if (error) {
         console.error('Error fetching leads:', error);
         toast.error('Failed to fetch leads');
-        return;
+        return [];
       }
 
       setAllLeads(data || []);
+      return data || [];
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
+      return [];
     } finally {
       setLoading(false);
     }
@@ -475,23 +477,52 @@ const LeadsPage = () => {
   const processNewLeadsForAutoReply = async (newLeads: Lead[]) => {
     if (!newLeads.length) return;
     
+    console.log('🤖 Auto-reply processing started:', {
+      totalNewLeads: newLeads.length,
+      autoReplyEnabled: autoReplySettings.enabled,
+      settings: autoReplySettings
+    });
+    
+    // Check if auto-reply is enabled
+    if (!autoReplySettings.enabled) {
+      console.log('Auto-reply is disabled, skipping processing');
+      return;
+    }
+    
     console.log('Processing new leads for auto-reply:', newLeads.length);
     
     // Only process leads that haven't been answered yet and haven't been auto-replied to
     const unansweredLeads = newLeads.filter(lead => !lead.answered && !lead.auto_replied);
     
+    console.log(`Found ${unansweredLeads.length} unanswered leads eligible for auto-reply`);
+    console.log('Lead statuses:', unansweredLeads.map(l => ({ 
+      email: l.sender_email, 
+      status: l.status,
+      answered: l.answered,
+      auto_replied: l.auto_replied 
+    })));
+    
     for (const lead of unansweredLeads) {
-      // Only auto-reply to hot and warm leads for safety
+      // Only auto-reply to hot and warm leads
       if (lead.status === 'hot' || lead.status === 'warm') {
+        console.log(`🔥 Auto-replying to ${lead.status} lead from ${lead.sender_email}`);
         const success = await sendAutoReply(lead);
         if (success) {
+          console.log(`✅ Auto-reply sent successfully to ${lead.sender_email}`);
           // Update local state to reflect the change
           setAllLeads(prev => prev.map(l => 
             l.id === lead.id 
               ? { ...l, answered: true, auto_replied: true, responded_at: new Date().toISOString() }
               : l
           ));
+          
+          // Also refresh from database to ensure consistency
+          await fetchLeads();
+        } else {
+          console.error(`❌ Failed to auto-reply to ${lead.sender_email}`);
         }
+      } else {
+        console.log(`❄️ Skipping auto-reply for ${lead.status} lead from ${lead.sender_email}`);
       }
     }
   };
@@ -628,8 +659,18 @@ const LeadsPage = () => {
   const handleSyncGmail = async (period: number = 7) => {
     try {
       setShowDeleted(false); // Switch back to main view when syncing
-      await syncGmailLeads(period);
+      
+      // Sync Gmail and get the result with new leads data
+      const syncResult = await syncGmailLeads(period);
+      
+      // Refresh all leads in the UI
       await fetchLeads();
+      
+      // Process new leads for auto-reply if any were found
+      if (syncResult?.new_leads_data && syncResult.new_leads_data.length > 0) {
+        console.log(`Found ${syncResult.new_leads_data.length} new leads, processing for auto-reply...`);
+        await processNewLeadsForAutoReply(syncResult.new_leads_data);
+      }
     } catch (error) {
       console.error('Gmail sync error:', error);
     }
@@ -1253,6 +1294,12 @@ const LeadsPage = () => {
                   }>
                     {selectedLead?.status}
                   </Badge>
+                  {selectedLead?.auto_replied && (
+                    <Badge variant="default" className="bg-blue-100 text-blue-700 border-blue-200">
+                      <Bot className="h-3 w-3 mr-1" />
+                      Auto-replied
+                    </Badge>
+                  )}
                   {selectedLead && (
                     <div className="relative">
                       {/* Celebration particles */}
@@ -1474,7 +1521,7 @@ const LeadsPage = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.2, duration: 0.3 }}
                           >
-                            Answered
+                            Answered {selectedLead.auto_replied && '(Auto-reply)'}
                           </motion.h3>
                           <motion.div
                             initial={{ opacity: 0, y: 10 }}
@@ -1495,6 +1542,20 @@ const LeadsPage = () => {
                                     : `${Math.floor(selectedLead.response_time_minutes / 60)}h ${selectedLead.response_time_minutes % 60}m`
                                   }
                                 </motion.span>
+                              )}
+                              {selectedLead.auto_replied && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  transition={{ delay: 0.5, duration: 0.3 }}
+                                  className="mt-3"
+                                >
+                                  <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full text-sm font-medium shadow-lg">
+                                    <Bot className="h-4 w-4" />
+                                    <span>AI Auto-replied</span>
+                                    <Sparkles className="h-3 w-3" />
+                                  </div>
+                                </motion.div>
                               )}
                             </p>
                           </motion.div>
@@ -1725,8 +1786,11 @@ const LeadCard = ({
                   {lead.sender_email}
                 </CardTitle>
                 {lead.answered && (
-                  <div className="ml-auto">
+                  <div className="ml-auto flex items-center gap-1">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    {lead.auto_replied && (
+                      <Bot className="h-4 w-4 text-blue-500" />
+                    )}
                   </div>
                 )}
               </div>
@@ -1745,6 +1809,12 @@ const LeadCard = ({
                   <Badge variant="default" className="text-xs px-2 py-0 bg-green-100 text-green-700 border-green-200">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     Answered
+                  </Badge>
+                )}
+                {lead.auto_replied && (
+                  <Badge variant="default" className="text-xs px-2 py-0 bg-blue-100 text-blue-700 border-blue-200">
+                    <Bot className="h-3 w-3 mr-1" />
+                    Auto-replied
                   </Badge>
                 )}
               </div>

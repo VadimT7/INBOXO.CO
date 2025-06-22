@@ -1,4 +1,3 @@
-
 import { GmailMessage } from './types.ts';
 
 export function extractEmailBody(messageData: GmailMessage): string {
@@ -86,4 +85,78 @@ export function isAutomatedEmail(senderEmail: string): boolean {
   // This allows emails with noreply@company.com or similar to be evaluated by our lead detection
   
   return false;
+}
+
+export function detectUrgencyLevel(subject: string, body: string): { level: 'high' | 'medium' | 'low'; indicators: string[] } {
+  const combinedText = `${subject} ${body}`.toLowerCase();
+  const indicators: string[] = [];
+  
+  // High urgency patterns
+  const highUrgencyPatterns = [
+    /\burgent\b/i,
+    /\basap\b/i,
+    /\bimmediately\b/i,
+    /\btoday\b/i,
+    /\bright now\b/i,
+    /\bemergency\b/i,
+    /\bcritical\b/i,
+    /\btime sensitive\b/i,
+    /\bdeadline\b/i,
+    /\bexpedite\b/i,
+    /\brush\b/i,
+    /\bpriority\b/i
+  ];
+  
+  // Medium urgency patterns
+  const mediumUrgencyPatterns = [
+    /\bthis week\b/i,
+    /\bnext week\b/i,
+    /\bsoon\b/i,
+    /\bquick\b/i,
+    /\bwhen can\b/i,
+    /\bhow soon\b/i,
+    /\bavailable\b/i
+  ];
+  
+  // Check for caps lock usage (more than 30% of alphabetic characters)
+  const alphabeticChars = combinedText.match(/[a-zA-Z]/g) || [];
+  const uppercaseChars = (subject + body).match(/[A-Z]/g) || [];
+  const capsLockRatio = alphabeticChars.length > 0 ? uppercaseChars.length / alphabeticChars.length : 0;
+  
+  if (capsLockRatio > 0.3) {
+    indicators.push('extensive caps lock usage');
+  }
+  
+  // Check for multiple exclamation marks
+  const exclamationCount = (combinedText.match(/!/g) || []).length;
+  if (exclamationCount >= 2) {
+    indicators.push('multiple exclamation marks');
+  }
+  
+  // Check high urgency patterns
+  for (const pattern of highUrgencyPatterns) {
+    if (pattern.test(combinedText)) {
+      const match = combinedText.match(pattern);
+      if (match) indicators.push(match[0]);
+    }
+  }
+  
+  // If high urgency indicators found
+  if (indicators.length > 0) {
+    return { level: 'high', indicators };
+  }
+  
+  // Check medium urgency patterns
+  for (const pattern of mediumUrgencyPatterns) {
+    if (pattern.test(combinedText)) {
+      const match = combinedText.match(pattern);
+      if (match) indicators.push(match[0]);
+    }
+  }
+  
+  if (indicators.length > 0) {
+    return { level: 'medium', indicators };
+  }
+  
+  return { level: 'low', indicators: [] };
 }

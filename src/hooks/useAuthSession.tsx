@@ -75,7 +75,6 @@ export function useAuthSession(): AuthSession {
           .upsert(
             {
               id: currentSession.user.id,
-              google_access_token: currentSession.provider_token,
               updated_at: new Date().toISOString()
             },
             { onConflict: 'id' }

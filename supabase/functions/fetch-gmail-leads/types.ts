@@ -1,4 +1,3 @@
-
 export interface GmailMessage {
   id: string;
   threadId: string;
@@ -39,6 +38,7 @@ export interface LeadData {
   sender_email: string;
   subject: string;
   snippet: string;
+  full_content?: string;
   received_at: string;
   status: string;
   notes: string;

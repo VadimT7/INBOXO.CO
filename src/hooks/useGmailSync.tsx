@@ -95,6 +95,7 @@ export function useGmailSync() {
         toast.info(`Gmail sync complete - no new leads found in the last ${period} days`);
       }
 
+      // Return the full data including new leads
       return data;
     } catch (error: any) {
       console.error('Gmail sync error:', error);
