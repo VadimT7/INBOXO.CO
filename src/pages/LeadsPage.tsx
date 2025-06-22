@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ import {
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
   MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Square, CheckSquare, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -96,6 +97,10 @@ const LeadsPage = () => {
   const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [isAnimating, setIsAnimating] = useState(false);
 
+  // Bulk selection state
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{
     isOpen: boolean;
@@ -122,8 +127,8 @@ const LeadsPage = () => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        delay: 100,
-        tolerance: 5,
+        delay: 220, // ms to hold before drag starts
+        tolerance: 5, // allow small movement before drag
       },
     })
   );
@@ -158,6 +163,132 @@ const LeadsPage = () => {
     setConfirmationModal(prev => ({ ...prev, isOpen: false, isLoading: false }));
   };
 
+  // Bulk selection helpers
+  const toggleLeadSelection = (leadId: string) => {
+    setSelectedLeadIds(prev => {
+      const newSelection = new Set(prev);
+      if (newSelection.has(leadId)) {
+        newSelection.delete(leadId);
+      } else {
+        newSelection.add(leadId);
+      }
+      return newSelection;
+    });
+  };
+
+  const selectAllVisibleLeads = () => {
+    const visibleLeadIds = filteredLeads.map(lead => lead.id);
+    setSelectedLeadIds(new Set(visibleLeadIds));
+  };
+
+  const deselectAllLeads = () => {
+    setSelectedLeadIds(new Set());
+  };
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    if (isSelectionMode) {
+      deselectAllLeads();
+    }
+  };
+
+  const bulkDeleteLeads = async (leadIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          is_deleted: true, 
+          deleted_at: new Date().toISOString() 
+        })
+        .in('id', leadIds);
+
+      if (error) {
+        toast.error('Failed to delete leads');
+        return;
+      }
+
+      // Update state more carefully to prevent blank page
+      const deletedAt = new Date().toISOString();
+      setAllLeads(prev => {
+        const updated = prev.map(lead => 
+          leadIds.includes(lead.id) 
+            ? { ...lead, is_deleted: true, deleted_at: deletedAt } 
+            : lead
+        );
+        console.log('Updated leads after bulk delete:', updated.length);
+        return updated;
+      });
+      
+      toast.success(`${leadIds.length} leads deleted • View in Recently Deleted to restore`, {
+        duration: 4000,
+      });
+      
+      // Clear selection and exit selection mode
+      deselectAllLeads();
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('Error bulk deleting leads:', error);
+      toast.error('Failed to delete leads');
+    }
+  };
+
+  const bulkRestoreLeads = async (leadIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          is_deleted: false, 
+          deleted_at: null 
+        })
+        .in('id', leadIds);
+
+      if (error) {
+        toast.error('Failed to restore leads');
+        return;
+      }
+
+      setAllLeads(prev => prev.map(lead => 
+        leadIds.includes(lead.id) 
+          ? { ...lead, is_deleted: false, deleted_at: null } 
+          : lead
+      ));
+      
+      toast.success(`${leadIds.length} leads restored`);
+      
+      // Clear selection
+      deselectAllLeads();
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('Error bulk restoring leads:', error);
+      toast.error('Failed to restore leads');
+    }
+  };
+
+  const bulkPermanentlyDeleteLeads = async (leadIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .in('id', leadIds);
+
+      if (error) {
+        toast.error('Failed to permanently delete leads');
+        return;
+      }
+
+      setAllLeads(prev => prev.filter(lead => !leadIds.includes(lead.id)));
+      
+      toast.success(`${leadIds.length} leads permanently deleted`);
+      
+      // Clear selection
+      deselectAllLeads();
+      setIsSelectionMode(false);
+    } catch (error) {
+      console.error('Error bulk permanently deleting leads:', error);
+      toast.error('Failed to permanently delete leads');
+    }
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string);
   };
@@ -167,6 +298,42 @@ const LeadsPage = () => {
     if (!over) return;
 
     setOverId(over.id as string);
+
+    // Only reorder if dragging over another lead (not a column)
+    const activeId = active.id as string;
+    const overId = over.id as string;
+    if (activeId === overId) return;
+
+    // Find the active and over leads in the current leads array
+    const activeIndex = leads.findIndex(lead => lead.id === activeId);
+    const overIndex = leads.findIndex(lead => lead.id === overId);
+
+    // Only reorder if both are valid and in the same column
+    if (activeIndex !== -1 && overIndex !== -1) {
+      const activeLead = leads[activeIndex];
+      const overLead = leads[overIndex];
+      if (activeLead.status === overLead.status) {
+        setAllLeads(prev => {
+          // Only reorder within the same status
+          const filtered = prev.filter(l => l.status === activeLead.status && !l.is_deleted);
+          const ids = filtered.map(l => l.id);
+          const from = ids.indexOf(activeId);
+          const to = ids.indexOf(overId);
+          if (from === -1 || to === -1) return prev;
+          // Get all leads in this status
+          const reordered = arrayMove(filtered, from, to);
+          // Merge back into prev
+          let result = [...prev];
+          let j = 0;
+          for (let i = 0; i < result.length; i++) {
+            if (result[i].status === activeLead.status && !result[i].is_deleted) {
+              result[i] = reordered[j++];
+            }
+          }
+          return result;
+        });
+      }
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -571,6 +738,12 @@ const LeadsPage = () => {
     }
   }, [searchParams]);
 
+  // Clear selection when switching between views
+  useEffect(() => {
+    deselectAllLeads();
+    setIsSelectionMode(false);
+  }, [showDeleted]);
+
   // Helper function to determine if content should be truncated
   const shouldTruncateContent = (content: string) => {
     return content && content.length > 300;
@@ -614,6 +787,11 @@ const LeadsPage = () => {
   const answeredLeads = showDeleted ? 0 : leads.filter(l => !l.is_deleted && l.answered).length;
   const completionPercentage = totalLeads > 0 ? (classifiedLeads / totalLeads) * 100 : 0;
   const answeredPercentage = totalLeads > 0 ? (answeredLeads / totalLeads) * 100 : 0;
+
+  // Selection metrics
+  const selectedLeads = Array.from(selectedLeadIds);
+  const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
+  const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
   if (authLoading || loading) {
     return (
@@ -739,6 +917,24 @@ const LeadsPage = () => {
                 {showDeleted ? 'Show Active' : 'Recently Deleted'}
               </Button>
               
+              <Button
+                variant={isSelectionMode ? 'default' : 'outline'}
+                onClick={toggleSelectionMode}
+                className="rounded-xl"
+              >
+                {isSelectionMode ? (
+                  <>
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </>
+                ) : (
+                  <>
+                    <CheckSquare className="h-4 w-4 mr-2" />
+                    Select
+                  </>
+                )}
+              </Button>
+              
               {/* Auto-Reply Toggle */}
               {!showDeleted && <AutoReplyToggle />}
               
@@ -752,6 +948,114 @@ const LeadsPage = () => {
               </Button>
             </div>
           </div>
+
+          {/* Bulk Actions Toolbar */}
+          <AnimatePresence>
+            {isSelectionMode && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -20, height: 0 }}
+                className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20 shadow-sm"
+              >
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            selectAllVisibleLeads();
+                          } else {
+                            deselectAllLeads();
+                          }
+                        }}
+                        className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                      />
+                      <span className="text-sm font-medium text-slate-700">
+                        {selectedLeads.length === 0 
+                          ? `Select all ${filteredLeads.length} leads`
+                          : `${selectedLeads.length} selected`
+                        }
+                      </span>
+                    </div>
+                    
+                    {selectedLeads.length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={deselectAllLeads}
+                        className="text-slate-500 hover:text-slate-700"
+                      >
+                        Clear selection
+                      </Button>
+                    )}
+                  </div>
+
+                  {selectedLeads.length > 0 && (
+                    <div className="flex items-center space-x-2">
+                      {showDeleted ? (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              showConfirmation({
+                                title: 'Restore Selected Leads',
+                                description: `Are you sure you want to restore ${selectedLeads.length} selected lead${selectedLeads.length === 1 ? '' : 's'}?`,
+                                confirmText: 'Restore',
+                                variant: 'info',
+                                onConfirm: () => bulkRestoreLeads(selectedLeads),
+                              });
+                            }}
+                            className="text-green-600 hover:text-green-700"
+                          >
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Restore ({selectedLeads.length})
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              showConfirmation({
+                                title: 'Delete Forever',
+                                description: `Are you sure you want to permanently delete ${selectedLeads.length} selected lead${selectedLeads.length === 1 ? '' : 's'}? This action cannot be undone.`,
+                                confirmText: 'Delete Forever',
+                                variant: 'danger',
+                                onConfirm: () => bulkPermanentlyDeleteLeads(selectedLeads),
+                              });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Forever ({selectedLeads.length})
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            showConfirmation({
+                              title: 'Delete Selected Leads',
+                              description: `Are you sure you want to delete ${selectedLeads.length} selected lead${selectedLeads.length === 1 ? '' : 's'}? You can restore them from Recently Deleted within 30 days.`,
+                              confirmText: 'Delete',
+                              variant: 'warning',
+                              onConfirm: () => bulkDeleteLeads(selectedLeads),
+                            });
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete ({selectedLeads.length})
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Content Area */}
@@ -777,11 +1081,21 @@ const LeadsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
-                    <Card className="bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300">
+                    <Card className={cn(
+                      "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300",
+                      selectedLeadIds.has(lead.id) && "ring-2 ring-blue-500 bg-blue-50/80"
+                    )}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center space-x-3 mb-2">
+                              {isSelectionMode && (
+                                <Checkbox
+                                  checked={selectedLeadIds.has(lead.id)}
+                                  onCheckedChange={() => toggleLeadSelection(lead.id)}
+                                  className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                />
+                              )}
                               <div className="w-2 h-2 bg-red-400 rounded-full"></div>
                               <h3 className="font-semibold text-slate-900 truncate">{lead.sender_email}</h3>
                               <Badge variant="outline" className="text-xs">
@@ -807,32 +1121,36 @@ const LeadsPage = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => restoreLead(lead.id)}
-                              className="text-green-600 hover:text-green-700"
-                            >
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Restore
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                showConfirmation({
-                                  title: 'Delete Forever',
-                                  description: `Are you sure you want to permanently delete the lead from ${lead.sender_email}? This action cannot be undone.`,
-                                  confirmText: 'Delete Forever',
-                                  variant: 'danger',
-                                  onConfirm: () => permanentlyDeleteLead(lead.id),
-                                });
-                              }}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Forever
-                            </Button>
+                            {!isSelectionMode && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => restoreLead(lead.id)}
+                                  className="text-green-600 hover:text-green-700"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                  Restore
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    showConfirmation({
+                                      title: 'Delete Forever',
+                                      description: `Are you sure you want to permanently delete the lead from ${lead.sender_email}? This action cannot be undone.`,
+                                      confirmText: 'Delete Forever',
+                                      variant: 'danger',
+                                      onConfirm: () => permanentlyDeleteLead(lead.id),
+                                    });
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete Forever
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -897,6 +1215,9 @@ const LeadsPage = () => {
                     setShowDetailsModal(true);
                   }}
                   overId={overId}
+                  isSelectionMode={isSelectionMode}
+                  selectedLeadIds={selectedLeadIds}
+                  onToggleSelection={toggleLeadSelection}
                 />
               ))}
             </div>
@@ -1299,9 +1620,22 @@ interface LeadCardProps {
   columnColor: string;
   isDragging?: boolean;
   isBeingDragged?: boolean;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (leadId: string) => void;
 }
 
-const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isBeingDragged }: LeadCardProps) => {
+const LeadCard = ({ 
+  lead, 
+  onStatusChange, 
+  onSelect, 
+  columnColor, 
+  isDragging, 
+  isBeingDragged, 
+  isSelectionMode = false,
+  isSelected = false,
+  onToggleSelection 
+}: LeadCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const formatDate = (dateString: string) => {
@@ -1327,10 +1661,23 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
 
   const urgency = getUrgencyIndicator();
 
-  // Handle content click for modal opening
+  // Handle content click for modal opening or selection
   const handleContentClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onSelect(lead);
+    const target = e.target as HTMLElement;
+    const isInteractive = target.closest('button, select, [role="combobox"], input[type="checkbox"]');
+    
+    // In selection mode, clicking anywhere on the card should toggle selection
+    if (isSelectionMode && onToggleSelection && !isInteractive) {
+      onToggleSelection(lead.id);
+      e.stopPropagation();
+      return;
+    }
+    
+    // In normal mode, open modal
+    if (!isSelectionMode && !isInteractive) {
+      e.stopPropagation();
+      onSelect(lead);
+    }
   };
 
   // Handle select change
@@ -1357,12 +1704,21 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
         "bg-white/80 backdrop-blur-sm border-white/20 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden",
         lead.is_deleted && "opacity-60",
         lead.answered && "bg-green-50/80 border-green-200/40",
+        isSelected && "ring-2 ring-blue-500 bg-blue-50/80",
         !isBeingDragged && "cursor-pointer"
       )}>
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2 mb-2">
+                {isSelectionMode && onToggleSelection && (
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleSelection(lead.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                  />
+                )}
                 <div className={`w-2 h-2 bg-gradient-to-r from-${columnColor}-400 to-${columnColor}-500 rounded-full`}></div>
                 <CardTitle className="text-sm font-medium text-slate-900 truncate">
                   {lead.sender_email}
@@ -1418,7 +1774,10 @@ const LeadCard = ({ lead, onStatusChange, onSelect, columnColor, isDragging, isB
         <CardContent className="pt-0 space-y-3">
           <div 
             onClick={!isBeingDragged ? handleContentClick : undefined} 
-            className={!isBeingDragged ? "cursor-pointer" : ""}
+            className={cn(
+              !isBeingDragged && "cursor-pointer",
+              isSelectionMode && "hover:bg-blue-50/50 transition-colors"
+            )}
           >
             <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1">
               {lead.subject || 'No subject'}
@@ -1478,9 +1837,20 @@ interface DraggableLeadCardProps {
   onStatusChange: (leadId: string, newStatus: string) => void;
   onSelect: (lead: Lead) => void;
   columnColor: string;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelection?: (leadId: string) => void;
 }
 
-const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: DraggableLeadCardProps) => {
+const DraggableLeadCard = ({ 
+  lead, 
+  onStatusChange, 
+  onSelect, 
+  columnColor, 
+  isSelectionMode = false, 
+  isSelected = false, 
+  onToggleSelection 
+}: DraggableLeadCardProps) => {
   const {
     attributes,
     listeners,
@@ -1497,11 +1867,18 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
 
   // Handle click events to show details on click, drag on hold
   const handleCardClick = (e: React.MouseEvent) => {
-    // Only call onSelect if we're not dragging and the click wasn't on an interactive element
     const target = e.target as HTMLElement;
-    const isInteractive = target.closest('button, select, [role="combobox"]');
+    const isInteractive = target.closest('button, select, [role="combobox"], input[type="checkbox"]');
     
-    if (!isDragging && !isInteractive) {
+    // In selection mode, clicking anywhere on the card should toggle selection
+    if (isSelectionMode && onToggleSelection && !isInteractive) {
+      onToggleSelection(lead.id);
+      e.stopPropagation();
+      return;
+    }
+    
+    // In normal mode, only open details if not dragging and not on interactive elements
+    if (!isDragging && !isInteractive && !isSelectionMode) {
       onSelect(lead);
       e.stopPropagation();
     }
@@ -1512,12 +1889,14 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "cursor-pointer hover:cursor-grab active:cursor-grabbing",
+        isSelectionMode 
+          ? "cursor-pointer" 
+          : "cursor-pointer hover:cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 rotate-3 scale-105"
       )}
       onClick={handleCardClick}
       {...attributes}
-      {...listeners}
+      {...(isSelectionMode ? {} : listeners)} // Disable drag listeners in selection mode
     >
       <LeadCard
         lead={lead}
@@ -1536,6 +1915,9 @@ const DraggableLeadCard = ({ lead, onStatusChange, onSelect, columnColor }: Drag
         columnColor={columnColor}
         isDragging={isDragging}
         isBeingDragged={true}
+        isSelectionMode={isSelectionMode}
+        isSelected={isSelected}
+        onToggleSelection={onToggleSelection}
       />
     </div>
   );
@@ -1555,9 +1937,22 @@ interface DroppableColumnProps {
   onStatusChange: (leadId: string, newStatus: string) => void;
   onSelectLead: (lead: Lead) => void;
   overId?: string | null;
+  isSelectionMode?: boolean;
+  selectedLeadIds?: Set<string>;
+  onToggleSelection?: (leadId: string) => void;
 }
 
-const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead, overId }: DroppableColumnProps) => {
+const DroppableColumn = ({ 
+  column, 
+  leads, 
+  index, 
+  onStatusChange, 
+  onSelectLead, 
+  overId, 
+  isSelectionMode = false, 
+  selectedLeadIds = new Set(), 
+  onToggleSelection 
+}: DroppableColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.key,
     data: {
@@ -1634,6 +2029,9 @@ const DroppableColumn = ({ column, leads, index, onStatusChange, onSelectLead, o
                   onStatusChange={onStatusChange}
                   onSelect={onSelectLead}
                   columnColor={column.color}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedLeadIds.has(lead.id)}
+                  onToggleSelection={onToggleSelection}
                 />
               </motion.div>
             ))}
