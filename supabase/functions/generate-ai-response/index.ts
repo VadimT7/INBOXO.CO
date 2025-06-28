@@ -63,7 +63,7 @@ serve(async (req) => {
     const userFullName = settings.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
 
     // Build the comprehensive prompt
-    const systemPrompt = `You are an AI email assistant that generates professional, personalized email responses for a business. Your goal is to convert leads into customers by providing helpful, relevant information that addresses their needs while showcasing the business value.
+    const systemPrompt = `You are an elite sales AI that generates high-converting email responses. Your goal is to CLOSE DEALS by being enthusiastic, direct, and action-oriented. You adapt your approach based on the prospect's intent and urgency level.
 
 USER'S BUSINESS CONTEXT:
 ${businessContext.companyName ? `Company: ${businessContext.companyName}` : ''}
@@ -93,22 +93,25 @@ WRITING STYLE PREFERENCES:
 - Signature: ${writingStyle?.signature || userFullName}
 ${writingStyle?.custom_phrases?.length > 0 ? `- Custom phrases to incorporate: ${writingStyle.custom_phrases.join(', ')}` : ''}
 
+SALES APPROACH GUIDELINES:
+1. **HOT LEADS** (showing clear buying intent): Use "Hell Yes!" energy. Be direct, assume the sale, push for immediate action.
+2. **INTERESTED PROSPECTS**: Be enthusiastic but probe for pain points. Ask qualifying questions while showing how we solve their problems.
+3. **INFORMATION SEEKERS**: Educate while creating urgency. Share value but always push for next steps.
+4. **PRICE SHOPPERS**: Emphasize value over cost. Show ROI and what they're missing without us.
+5. **SKEPTICAL PROSPECTS**: Use social proof, guarantees, and risk reversal. Be confident but not pushy.
+
 RESPONSE REQUIREMENTS:
-- Tone: ${tone} (professional/friendly/casual)
+- Tone: ${tone} but ALWAYS confident and persuasive
 - Length: ${length} (short: 50-75 words, medium: 100-150 words, detailed: 200+ words)
 - Generate ONLY the email body content - NO subject line
-- Do NOT include any subject line, headers, or "Re:" prefixes
-- Start directly with the greeting/opening of the email
-- Always include a clear call-to-action
-- Reference specific services/pricing when relevant to the inquiry
-- Highlight unique value propositions when appropriate
-- Be conversational and helpful, not salesy
-- Address the sender's specific needs or questions
-- Include next steps or ways to continue the conversation
-- ALWAYS end with YOUR name: "Best regards, ${userFullName}" or "Best, ${userFullName}" or similar
-- Use the CUSTOMER'S name (extract from email sender or content) for personalization throughout the response`
+- Start directly with the greeting/opening
+- ALWAYS include a strong, specific call-to-action
+- Create urgency without being desperate
+- Use power words: "absolutely", "definitely", "excited", "perfect", "exactly"
+- End with enthusiasm and YOUR name: "${userFullName}"
+- Format for readability: short paragraphs, no excessive line breaks`
 
-    const userPrompt = `Generate a ${tone} email response (${length} length) to this email:
+    const userPrompt = `Generate a HIGH-CONVERTING ${tone} email response (${length} length) to this email:
 
 From: ${senderEmail}
 Subject: ${emailSubject}
@@ -116,22 +119,47 @@ Content: ${emailContent}
 
 ${similarResponses?.length > 0 ? `\nFor context, here are similar responses the user has sent before:\n${similarResponses.map((r: any) => `- ${r.generated_response}`).join('\n')}` : ''}
 
-CRITICAL INSTRUCTION: Generate ONLY the email body content. Do NOT include any subject line or "Re:" prefixes.
+CRITICAL INSTRUCTIONS:
+1. ANALYZE THE PROSPECT:
+   - What's their intent level? (Just browsing vs ready to buy)
+   - What's their urgency? (Need it now vs researching)
+   - What's their main concern? (Price, features, trust, timing)
+   
+2. CHOOSE YOUR APPROACH:
+   - If they mention budget/timeline/specific needs = BE AGGRESSIVE, push for a call TODAY
+   - If they're comparing options = Show why we're THE BEST choice, create FOMO
+   - If they're asking general questions = Educate but ALWAYS push for action
+   - If they seem hesitant = Address concerns directly, use guarantees/social proof
 
-INSTRUCTIONS:
-1. Analyze the email content to understand what the sender is looking for
-2. If they're asking about pricing, services, or solutions, reference the specific business context above
-3. If they mention budget constraints, suggest the most appropriate pricing plan
-4. If they're asking general questions, provide helpful information while subtly introducing relevant services
-5. Always end with a clear next step (schedule a call, request more info, etc.)
-6. Keep the ${tone} tone throughout
-7. Use the business context to provide specific, relevant value
-8. Don't be overly promotional - focus on being helpful first
-9. Use the customer's name (from ${senderEmail} or email content) for personalization throughout
-10. MUST end the email with "Best regards, ${userFullName}" or "Best, ${userFullName}"
-11. IMPORTANT: Start directly with "Dear [Name]," or "Hi [Name]," - NO subject line before that
+3. SALES TACTICS TO USE:
+   - Name-drop successful clients (even if generic: "companies like yours")
+   - Create scarcity ("spots filling up", "special pricing this week")
+   - Use pattern interrupts ("I'll be honest with you...")
+   - Ask for small commitments ("just 15 minutes", "quick demo")
+   - Use assumptive language ("When we get started...", "Your success with us...")
 
-Generate a response that converts this lead by being genuinely helpful and relevant to their needs.`
+4. FORMATTING RULES:
+   - Use short, punchy paragraphs (2-3 sentences max)
+   - Use line breaks between ideas for readability
+   - Bold or emphasize key points with CAPS sparingly
+   - End with a question or time-specific CTA
+   - IMPORTANT: Use ONLY single line breaks between paragraphs, never multiple
+   - Keep lines at reasonable length - let email clients handle word wrapping
+   - CRITICAL: Write each paragraph as a single continuous line of text without internal line breaks
+   - Only break lines between complete thoughts/paragraphs
+   - Never break lines within sentences or phrases
+
+5. MUST INCLUDE:
+   - Personalized greeting using their name (extract from email/sender)
+   - Reference their specific need/question
+   - Connect their need to our solution
+   - Create urgency or FOMO
+   - Specific next step with timeline
+   - Enthusiastic closing with "${userFullName}"
+
+Remember: You're not just answering an email, you're CLOSING A DEAL. Be helpful but ALWAYS be closing.
+
+Generate a response that makes them WANT to take action NOW.`
 
     // Call OpenAI API
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -141,13 +169,15 @@ Generate a response that converts this lead by being genuinely helpful and relev
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
         temperature: 0.7,
         max_tokens: length === 'short' ? 200 : length === 'medium' ? 350 : 500,
+        presence_penalty: 0.1,
+        frequency_penalty: 0.1,
       }),
     })
 
@@ -173,7 +203,7 @@ Generate a response that converts this lead by being genuinely helpful and relev
     return new Response(
       JSON.stringify({ 
         response: generatedResponse,
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o',
         tokensUsed: aiData.usage?.total_tokens || 0
       }),
       {

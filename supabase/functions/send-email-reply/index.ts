@@ -15,6 +15,37 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log('=== Send Email Reply Function Started ===');
     
+    // Helper function to format email body for better display
+    const formatEmailBody = (body: string): string => {
+      // First, normalize all line endings to \n
+      let formatted = body.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      
+      // Remove any existing excessive whitespace and normalize
+      formatted = formatted.trim();
+      
+      // Split into paragraphs (double line breaks or more)
+      const paragraphs = formatted.split(/\n\s*\n/);
+      
+      // Process each paragraph
+      const processedParagraphs = paragraphs.map(paragraph => {
+        // Remove line breaks within paragraphs unless they're intentional (after punctuation)
+        let processed = paragraph
+          // Remove line breaks that split words or sentences inappropriately
+          .replace(/([a-z,])\s*\n\s*([a-z])/gi, '$1 $2')
+          // Remove line breaks before punctuation
+          .replace(/\s*\n\s*([.!?:;,])/g, '$1')
+          // Clean up multiple spaces
+          .replace(/\s+/g, ' ')
+          // Trim the paragraph
+          .trim();
+        
+        return processed;
+      }).filter(p => p.length > 0);
+      
+      // Join paragraphs with double line breaks
+      return processedParagraphs.join('\n\n');
+    };
+
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
@@ -47,6 +78,9 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error('Missing required fields: recipientEmail, subject, or body');
     }
 
+    // Format the email body for better display
+    const formattedBody = formatEmailBody(body);
+    
     console.log(`Sending email to ${recipientEmail} with subject: ${subject}`);
 
     // Get the original Gmail message ID from the lead to properly thread the reply
@@ -125,7 +159,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     messageParts.push(''); // Empty line before body
-    messageParts.push(body);
+    messageParts.push(formattedBody);
 
     const message = messageParts.join('\r\n');
 

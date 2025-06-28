@@ -1965,35 +1965,13 @@ const LeadCard = ({
                 {lead.answered && (
                   <div className="ml-auto flex items-center gap-1">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    {lead.auto_replied && (
-                      <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                      >
-                        <Bot className="h-4 w-4 text-blue-500 drop-shadow-sm" />
-                      </motion.div>
-                    )}
                   </div>
                 )}
-                {/* Auto-reply loading spinner */}
-                {isAutoReplying && !lead.answered && (
-                  <div className="ml-auto flex items-center gap-1">
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"
-                    />
-                    <Bot className="h-4 w-4 text-blue-500" />
-                  </div>
-                )}
+
               </div>
               <div className="flex items-center space-x-2">
                 <urgency.icon className={`h-3 w-3 ${urgency.color}`} />
                 <p className="text-xs text-slate-500">{formatDate(lead.received_at)}</p>
-                <Badge variant="outline" className="text-xs px-2 py-0">
-                  {urgency.label}
-                </Badge>
                 {lead.is_deleted && (
                   <Badge variant="secondary" className="text-xs px-2 py-0">
                     Deleted
@@ -2030,6 +2008,7 @@ const LeadCard = ({
                     transition={{ duration: 0.3 }}
                   >
                     <Badge variant="default" className="text-xs px-2 py-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300 shadow-sm">
+                      <Bot className="h-3 w-3 mr-1" />
                       <motion.div
                         animate={{ rotate: 360 }}
                         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
