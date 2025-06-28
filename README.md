@@ -123,7 +123,9 @@ supabase functions deploy
 
 - All API routes are protected with JWT authentication
 - Stripe webhooks are verified with signatures
-- Google OAuth scopes are limited to Gmail read-only
+- Google OAuth requires both read and send scopes:
+  - `https://www.googleapis.com/auth/gmail.readonly` (for fetching emails)
+  - `https://www.googleapis.com/auth/gmail.send` (for sending auto-replies)
 - Environment variables are never exposed to the client
 - Rate limiting implemented on critical endpoints
 

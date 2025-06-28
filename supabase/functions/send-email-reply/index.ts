@@ -49,38 +49,148 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending email to ${recipientEmail} with subject: ${subject}`);
 
-    // Create the email message in RFC 2822 format
+    // Get the original Gmail message ID from the lead to properly thread the reply
+    let originalMessageId = null;
+    let leadData: any = null;
+    if (leadId) {
+      const { data, error: leadError } = await supabase
+        .from('leads')
+        .select('gmail_message_id')
+        .eq('id', leadId)
+        .eq('user_id', user.id)
+        .single();
+      
+      leadData = data;
+
+      if (!leadError && leadData?.gmail_message_id) {
+        originalMessageId = leadData.gmail_message_id;
+        console.log(`Found original message ID: ${originalMessageId}`);
+
+        // Get the original message to extract the Message-ID header
+        try {
+          const originalMessageResponse = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${originalMessageId}?format=metadata&metadataHeaders=Message-ID`,
+            {
+              headers: {
+                'Authorization': `Bearer ${googleToken}`,
+              }
+            }
+          );
+
+          if (originalMessageResponse.ok) {
+            const originalMessage = await originalMessageResponse.json();
+            const headers = originalMessage.payload?.headers || [];
+            const messageIdHeader = headers.find((h: any) => h.name === 'Message-ID');
+            if (messageIdHeader) {
+              originalMessageId = messageIdHeader.value;
+              console.log(`Found Message-ID header: ${originalMessageId}`);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching original message:', error);
+        }
+      }
+    }
+
+    // Get user's email address for the From header
+    let userEmail = user.email;
+    try {
+      const profileResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+        headers: {
+          'Authorization': `Bearer ${googleToken}`,
+        }
+      });
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json();
+        userEmail = profile.emailAddress || user.email;
+        console.log(`Using email address: ${userEmail}`);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+
+    // Create the email message in RFC 2822 format with proper threading headers
     const messageParts = [
+      `From: ${userEmail}`,
       `To: ${recipientEmail}`,
       `Subject: ${subject}`,
+      'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=utf-8',
-      '',
-      body
     ];
+
+    // Add threading headers if we have the original message ID
+    if (originalMessageId) {
+      messageParts.push(`In-Reply-To: ${originalMessageId}`);
+      messageParts.push(`References: ${originalMessageId}`);
+    }
+
+    messageParts.push(''); // Empty line before body
+    messageParts.push(body);
+
     const message = messageParts.join('\r\n');
 
     // Encode the message
-    const encodedMessage = btoa(message)
+    const encodedMessage = btoa(unescape(encodeURIComponent(message)))
       .replace(/\+/g, '-')
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
     // Send the email using Gmail API
+    const sendPayload: any = {
+      raw: encodedMessage
+    };
+
+    // If we have the original message ID, add it as threadId for proper threading
+    if (leadId && originalMessageId) {
+      // Note: We need the thread ID, not the message ID. Let's get it.
+      try {
+        const threadResponse = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${leadData.gmail_message_id}?format=minimal`,
+          {
+            headers: {
+              'Authorization': `Bearer ${googleToken}`,
+            }
+          }
+        );
+        if (threadResponse.ok) {
+          const threadData = await threadResponse.json();
+          if (threadData.threadId) {
+            sendPayload.threadId = threadData.threadId;
+            console.log(`Using thread ID: ${threadData.threadId}`);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching thread ID:', error);
+      }
+    }
+
+    console.log('Sending email with payload:', { ...sendPayload, raw: 'REDACTED' });
+
     const sendResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${googleToken}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        raw: encodedMessage
-      })
+      body: JSON.stringify(sendPayload)
     });
+
+    console.log('Gmail API response status:', sendResponse.status);
 
     if (!sendResponse.ok) {
       const errorData = await sendResponse.text();
       console.error('Gmail API error:', sendResponse.status, errorData);
-      throw new Error(`Failed to send email: ${sendResponse.status} ${errorData}`);
+      
+      // Check for specific error types
+      if (sendResponse.status === 401) {
+        throw new Error('Google access token is invalid or expired. Please sign out and sign in again.');
+      } else if (sendResponse.status === 403) {
+        throw new Error('Gmail API access denied. Please ensure you have granted email sending permissions.');
+      } else if (sendResponse.status === 400) {
+        throw new Error(`Invalid email format or content: ${errorData}`);
+      } else {
+        throw new Error(`Failed to send email: ${sendResponse.status} ${errorData}`);
+      }
     }
 
     const sentMessage = await sendResponse.json();

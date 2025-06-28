@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,6 +106,9 @@ const LeadsPage = () => {
   // Bulk selection state
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+
+  // Auto-reply loading state
+  const [autoReplyingLeads, setAutoReplyingLeads] = useState<Set<string>>(new Set());
 
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -429,8 +432,9 @@ const LeadsPage = () => {
         return [];
       }
 
-      setAllLeads(data || []);
-      return data || [];
+      const leads = data || [];
+      setAllLeads(leads);
+      return leads;
     } catch (error) {
       console.error('Error fetching leads:', error);
       toast.error('Failed to fetch leads');
@@ -474,7 +478,7 @@ const LeadsPage = () => {
   };
 
   // Process new leads for auto-reply
-  const processNewLeadsForAutoReply = async (newLeads: Lead[]) => {
+  const processNewLeadsForAutoReply = useCallback(async (newLeads: Lead[]) => {
     if (!newLeads.length) return;
     
     console.log('🤖 Auto-reply processing started:', {
@@ -502,13 +506,34 @@ const LeadsPage = () => {
       auto_replied: l.auto_replied 
     })));
     
-    for (const lead of unansweredLeads) {
-      // Only auto-reply to hot and warm leads
-      if (lead.status === 'hot' || lead.status === 'warm') {
-        console.log(`🔥 Auto-replying to ${lead.status} lead from ${lead.sender_email}`);
+    // Filter for hot and warm leads
+    const leadsToAutoReply = unansweredLeads.filter(lead => 
+      lead.status === 'hot' || lead.status === 'warm'
+    );
+    
+    console.log(`🔥 Found ${leadsToAutoReply.length} hot/warm leads to auto-reply`);
+    
+    if (leadsToAutoReply.length === 0) {
+      console.log('❄️ No hot/warm leads found for auto-reply');
+      return;
+    }
+    
+    // Add all leads to loading state at once
+    setAutoReplyingLeads(prev => {
+      const newSet = new Set(prev);
+      leadsToAutoReply.forEach(lead => newSet.add(lead.id));
+      return newSet;
+    });
+    
+    // Process all leads in parallel for faster processing
+    const autoReplyPromises = leadsToAutoReply.map(async (lead) => {
+      console.log(`🔥 Auto-replying to ${lead.status} lead from ${lead.sender_email}`);
+      
+      try {
         const success = await sendAutoReply(lead);
         if (success) {
           console.log(`✅ Auto-reply sent successfully to ${lead.sender_email}`);
+          
           // Update local state to reflect the change
           setAllLeads(prev => prev.map(l => 
             l.id === lead.id 
@@ -516,14 +541,107 @@ const LeadsPage = () => {
               : l
           ));
           
-          // Also refresh from database to ensure consistency
-          await fetchLeads();
+          // Show success toast
+          toast.success(
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-blue-500" />
+              <span>Auto-replied to {lead.sender_email}</span>
+            </div>,
+            { duration: 3000 }
+          );
+          
+          return { lead, success: true };
         } else {
           console.error(`❌ Failed to auto-reply to ${lead.sender_email}`);
+          return { lead, success: false };
         }
-      } else {
-        console.log(`❄️ Skipping auto-reply for ${lead.status} lead from ${lead.sender_email}`);
+      } catch (error) {
+        console.error(`❌ Error during auto-reply to ${lead.sender_email}:`, error);
+        return { lead, success: false, error };
+      } finally {
+        // Remove lead from loading state
+        setAutoReplyingLeads(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(lead.id);
+          return newSet;
+        });
       }
+    });
+    
+    // Wait for all auto-replies to complete
+    const results = await Promise.all(autoReplyPromises);
+    
+    const successCount = results.filter(r => r.success).length;
+    const failCount = results.filter(r => !r.success).length;
+    
+    console.log(`✨ Auto-reply batch complete: ${successCount} succeeded, ${failCount} failed`);
+    
+    // Show summary toast if multiple leads were processed
+    if (leadsToAutoReply.length > 1) {
+      if (failCount === 0) {
+        toast.success(`🎉 Auto-replied to all ${successCount} leads!`, { duration: 4000 });
+      } else if (successCount > 0) {
+        toast.warning(`Auto-replied to ${successCount} leads, ${failCount} failed`, { duration: 4000 });
+      } else {
+        toast.error(`Failed to auto-reply to all ${failCount} leads`, { duration: 4000 });
+      }
+    }
+  }, [autoReplySettings.enabled, sendAutoReply]);
+
+  // Test auto-reply for debugging
+  const testAutoReply = async () => {
+    console.log('🧪 Testing auto-reply functionality...');
+    
+    // Find the most recent hot or warm lead that hasn't been auto-replied to
+    const testLead = leads.find(lead => 
+      (lead.status === 'hot' || lead.status === 'warm') && 
+      !lead.answered && 
+      !lead.auto_replied
+    );
+    
+    if (!testLead) {
+      toast.error('No eligible leads found for testing. Need a hot/warm lead that hasn\'t been answered or auto-replied to.');
+      return;
+    }
+    
+    console.log('🎯 Testing auto-reply with lead:', {
+      id: testLead.id,
+      email: testLead.sender_email,
+      subject: testLead.subject,
+      status: testLead.status
+    });
+    
+    // Add lead to loading state
+    setAutoReplyingLeads(prev => new Set([...prev, testLead.id]));
+    
+    try {
+      const success = await sendAutoReply(testLead);
+      if (success) {
+        // Update local state to reflect the change
+        setAllLeads(prev => prev.map(l => 
+          l.id === testLead.id 
+            ? { ...l, answered: true, auto_replied: true, responded_at: new Date().toISOString() }
+            : l
+        ));
+        
+        toast.success(
+          <div className="flex items-center gap-2">
+            <Bot className="h-4 w-4 text-blue-500" />
+            <span>Test auto-reply sent to {testLead.sender_email}!</span>
+          </div>,
+          { duration: 3000 }
+        );
+      }
+    } catch (error) {
+      console.error('Test auto-reply failed:', error);
+      toast.error('Test auto-reply failed. Check console for details.');
+    } finally {
+      // Remove lead from loading state
+      setAutoReplyingLeads(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(testLead.id);
+        return newSet;
+      });
     }
   };
 
@@ -660,16 +778,46 @@ const LeadsPage = () => {
     try {
       setShowDeleted(false); // Switch back to main view when syncing
       
+      console.log('🔄 Starting Gmail sync...');
+      
+      // Get current lead IDs before sync
+      const leadIdsBefore = new Set(allLeads.map(lead => lead.id));
+      
       // Sync Gmail and get the result with new leads data
       const syncResult = await syncGmailLeads(period);
       
-      // Refresh all leads in the UI
-      await fetchLeads();
+      console.log('📧 Gmail sync result:', {
+        newLeadsCount: syncResult?.new_leads_data?.length || 0,
+        totalNewEmails: syncResult?.total_new_emails || 0,
+        autoReplyEnabled: autoReplySettings.enabled
+      });
+      
+      // Refresh all leads in the UI and get the updated data
+      const updatedLeads = await fetchLeads();
+      
+      // Find truly new leads by comparing IDs
+      const newLeads = updatedLeads.filter(lead => !leadIdsBefore.has(lead.id));
+      
+      console.log('🆕 New leads detected:', {
+        count: newLeads.length,
+        leads: newLeads.map(l => ({ 
+          id: l.id, 
+          email: l.sender_email, 
+          status: l.status,
+          subject: l.subject 
+        }))
+      });
       
       // Process new leads for auto-reply if any were found
-      if (syncResult?.new_leads_data && syncResult.new_leads_data.length > 0) {
-        console.log(`Found ${syncResult.new_leads_data.length} new leads, processing for auto-reply...`);
-        await processNewLeadsForAutoReply(syncResult.new_leads_data);
+      if (newLeads.length > 0 && autoReplySettings.enabled) {
+        console.log(`🤖 Processing ${newLeads.length} new leads for auto-reply...`);
+        
+        // Process immediately without delay
+        await processNewLeadsForAutoReply(newLeads);
+      } else if (newLeads.length === 0) {
+        console.log('📭 No new leads found during sync');
+      } else {
+        console.log('🔕 Auto-reply is disabled, skipping processing');
       }
     } catch (error) {
       console.error('Gmail sync error:', error);
@@ -819,6 +967,32 @@ const LeadsPage = () => {
   const selectedLeads = Array.from(selectedLeadIds);
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
+
+  // Effect to watch for new leads and trigger auto-reply
+  useEffect(() => {
+    // Only run if auto-reply is enabled and we have leads
+    if (!autoReplySettings.enabled || allLeads.length === 0) return;
+    
+    // Find leads that need auto-reply (hot/warm, not answered, not auto-replied)
+    const leadsNeedingAutoReply = allLeads.filter(lead => 
+      !lead.is_deleted &&
+      !lead.answered && 
+      !lead.auto_replied &&
+      (lead.status === 'hot' || lead.status === 'warm') &&
+      !autoReplyingLeads.has(lead.id) // Not already being processed
+    );
+    
+    if (leadsNeedingAutoReply.length > 0) {
+      console.log('🚨 Found leads needing auto-reply:', leadsNeedingAutoReply.map(l => ({
+        id: l.id,
+        email: l.sender_email,
+        status: l.status
+      })));
+      
+      // Process them immediately
+      processNewLeadsForAutoReply(leadsNeedingAutoReply);
+    }
+  }, [allLeads, autoReplySettings.enabled, autoReplyingLeads, processNewLeadsForAutoReply]); // Watch for changes in leads, auto-reply settings, or processing state
 
   if (authLoading || loading) {
     return (
@@ -1260,6 +1434,7 @@ const LeadsPage = () => {
                   isSelectionMode={isSelectionMode}
                   selectedLeadIds={selectedLeadIds}
                   onToggleSelection={toggleLeadSelection}
+                  autoReplyingLeads={autoReplyingLeads}
                 />
               ))}
             </div>
@@ -1685,6 +1860,7 @@ interface LeadCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (leadId: string) => void;
+  isAutoReplying?: boolean;
 }
 
 const LeadCard = ({ 
@@ -1696,7 +1872,8 @@ const LeadCard = ({
   isBeingDragged, 
   isSelectionMode = false,
   isSelected = false,
-  onToggleSelection 
+  onToggleSelection,
+  isAutoReplying = false
 }: LeadCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -1789,8 +1966,25 @@ const LeadCard = ({
                   <div className="ml-auto flex items-center gap-1">
                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                     {lead.auto_replied && (
-                      <Bot className="h-4 w-4 text-blue-500" />
+                      <motion.div
+                        initial={{ scale: 0, rotate: -180 }}
+                        animate={{ scale: 1, rotate: 0 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                      >
+                        <Bot className="h-4 w-4 text-blue-500 drop-shadow-sm" />
+                      </motion.div>
                     )}
+                  </div>
+                )}
+                {/* Auto-reply loading spinner */}
+                {isAutoReplying && !lead.answered && (
+                  <div className="ml-auto flex items-center gap-1">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"
+                    />
+                    <Bot className="h-4 w-4 text-blue-500" />
                   </div>
                 )}
               </div>
@@ -1812,10 +2006,38 @@ const LeadCard = ({
                   </Badge>
                 )}
                 {lead.auto_replied && (
-                  <Badge variant="default" className="text-xs px-2 py-0 bg-blue-100 text-blue-700 border-blue-200">
-                    <Bot className="h-3 w-3 mr-1" />
-                    Auto-replied
-                  </Badge>
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.3 }}
+                  >
+                    <Badge variant="default" className="text-xs px-2 py-0 bg-gradient-to-r from-blue-100 to-purple-100 text-blue-700 border-blue-200 shadow-sm">
+                      <motion.div
+                        animate={{ rotate: [0, 5, -5, 0] }}
+                        transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                      >
+                        <Bot className="h-3 w-3 mr-1" />
+                      </motion.div>
+                      Auto-replied
+                    </Badge>
+                  </motion.div>
+                )}
+                {/* Auto-replying badge */}
+                {isAutoReplying && !lead.answered && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Badge variant="default" className="text-xs px-2 py-0 bg-gradient-to-r from-blue-500 to-purple-500 text-white border-blue-300 shadow-sm">
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="h-3 w-3 mr-1 border border-white border-t-transparent rounded-full"
+                      />
+                      Auto-replying...
+                    </Badge>
+                  </motion.div>
                 )}
               </div>
             </div>
@@ -1911,6 +2133,7 @@ interface DraggableLeadCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onToggleSelection?: (leadId: string) => void;
+  isAutoReplying?: boolean;
 }
 
 const DraggableLeadCard = ({ 
@@ -1920,7 +2143,8 @@ const DraggableLeadCard = ({
   columnColor, 
   isSelectionMode = false, 
   isSelected = false, 
-  onToggleSelection 
+  onToggleSelection,
+  isAutoReplying = false
 }: DraggableLeadCardProps) => {
   const {
     attributes,
@@ -1989,6 +2213,7 @@ const DraggableLeadCard = ({
         isSelectionMode={isSelectionMode}
         isSelected={isSelected}
         onToggleSelection={onToggleSelection}
+        isAutoReplying={isAutoReplying}
       />
     </div>
   );
@@ -2011,6 +2236,7 @@ interface DroppableColumnProps {
   isSelectionMode?: boolean;
   selectedLeadIds?: Set<string>;
   onToggleSelection?: (leadId: string) => void;
+  autoReplyingLeads?: Set<string>;
 }
 
 const DroppableColumn = ({ 
@@ -2022,7 +2248,8 @@ const DroppableColumn = ({
   overId, 
   isSelectionMode = false, 
   selectedLeadIds = new Set(), 
-  onToggleSelection 
+  onToggleSelection,
+  autoReplyingLeads = new Set()
 }: DroppableColumnProps) => {
   const { setNodeRef, isOver } = useDroppable({
     id: column.key,
@@ -2103,6 +2330,7 @@ const DroppableColumn = ({
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedLeadIds.has(lead.id)}
                   onToggleSelection={onToggleSelection}
+                  isAutoReplying={autoReplyingLeads.has(lead.id)}
                 />
               </motion.div>
             ))}

@@ -32,11 +32,36 @@ export function useGmailSync() {
       // We need the provider token (Google access token) for Gmail API
       if (!session.session.provider_token) {
         console.error('No provider token found in session');
-        toast.error('Google access token not found. Please sign out and sign in again with Google.');
+        toast.error('Google access token not found. Please sign out and sign in again with Google.', {
+          duration: 5000,
+          action: {
+            label: 'Sign Out',
+            onClick: async () => {
+              await supabase.auth.signOut();
+              window.location.href = '/login';
+            }
+          }
+        });
         return;
       }
       
       console.log('Google access token found, calling Edge function...');
+      
+      // Check token age if available
+      if (session.session.expires_at) {
+        const tokenExpiresAt = new Date(session.session.expires_at * 1000);
+        const now = new Date();
+        const minutesUntilExpiry = Math.floor((tokenExpiresAt.getTime() - now.getTime()) / 1000 / 60);
+        
+        console.log(`Token expires in ${minutesUntilExpiry} minutes`);
+        
+        if (minutesUntilExpiry < 5) {
+          console.warn('Token is about to expire or has expired');
+          toast.warning('Your Google session is expiring. Please sign out and sign in again soon.', {
+            duration: 5000
+          });
+        }
+      }
       
       const { data, error } = await supabase.functions.invoke('fetch-gmail-leads', {
         body: { period },
