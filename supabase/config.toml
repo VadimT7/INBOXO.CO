@@ -12,15 +12,8 @@ enabled = true
 site_url = "https://inboxo.co"
 additional_redirect_urls = [
     "https://inboxo.co",
-    "http://localhost:8080",
-    "http://127.0.0.1:8080",
-    "https://localhost:8080",
-    "https://127.0.0.1:8080",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "https://localhost:5173",
-    "https://127.0.0.1:5173",
-    "https://inboxflows-hero-glow.vercel.app"
+    "https://inboxflows-hero-glow.vercel.app",
+    "http://localhost:8080"
 ]
 
 [auth.external.google]
