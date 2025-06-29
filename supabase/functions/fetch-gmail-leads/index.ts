@@ -62,6 +62,24 @@ const handler = async (req: Request): Promise<Response> => {
     const existingMessageIds = new Set(existingLeads?.map(lead => lead.gmail_message_id) || []);
     console.log(`Found ${existingMessageIds.size} existing leads in database`);
 
+    // Get user's email address to exclude their own messages
+    let userEmail = user.email;
+    try {
+      const profileResponse = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+        headers: {
+          'Authorization': `Bearer ${googleToken}`,
+        }
+      });
+      if (profileResponse.ok) {
+        const profile = await profileResponse.json();
+        userEmail = profile.emailAddress || user.email;
+        console.log(`User's Gmail address: ${userEmail}`);
+      }
+    } catch (error) {
+      console.error('Error fetching user Gmail profile:', error);
+      console.log(`Falling back to auth email: ${userEmail}`);
+    }
+
     // Fetch both incoming and sent emails
     const leads: LeadData[] = [];
     let totalProcessed = 0;
@@ -101,6 +119,12 @@ const handler = async (req: Request): Promise<Response> => {
           const { senderEmail, subject } = extractEmailHeaders(messageData);
           
           console.log(`Processing email: ${subject} (from: ${senderEmail})`);
+
+          // Skip emails from the user themselves (their own replies/sent emails)
+          if (senderEmail.toLowerCase() === userEmail?.toLowerCase()) {
+            console.log(`Skipping email from user themselves: ${senderEmail}`);
+            continue;
+          }
 
           // Enhanced automated email detection
           if (isAutomatedEmail(senderEmail) || isAutomatedSubject(subject)) {
