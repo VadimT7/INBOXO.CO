@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,7 +29,14 @@ import {
   CheckCircle2, Circle, TrendingUp, Calendar, MoreHorizontal,
   Eye, ExternalLink, Archive, Trash2, Heart, AlertTriangle,
   MessageSquare, Send, ArrowLeft, Copy, Share2, GripVertical,
-  ChevronDown, ChevronUp, Square, CheckSquare, X, Bot, Sparkles
+  ChevronDown, ChevronUp, Square, CheckSquare, X, Bot, Sparkles,
+  Building2,
+  Phone,
+  MoreVertical,
+  Plus,
+  History,
+  ChevronLeft,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -62,7 +69,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 interface Lead {
   id: string;
@@ -83,31 +94,40 @@ interface Lead {
 }
 
 const LeadsPage = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const confetti = useConfetti();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
   const { markLeadAsResponded } = useResponseTimeAnalytics();
-  const { triggerSuccess } = useConfetti();
   const { hasValidAccess } = useSubscriptionStatus();
-  const { sendAutoReply, settings: autoReplySettings } = useAutoReply();
-  const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const [allLeads, setAllLeads] = useState<Lead[]>([]); // Store all leads (active + deleted)
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [showDeleted, setShowDeleted] = useState(false);
-  const [showFullContent, setShowFullContent] = useState(false);
-  const [showAIResponse, setShowAIResponse] = useState(false);
   const [answeredFilter, setAnsweredFilter] = useState<'all' | 'answered' | 'unanswered'>('all');
-  const [isAnimating, setIsAnimating] = useState(false);
-
-  // Bulk selection state
+  const [showDeleted, setShowDeleted] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-
-  // Auto-reply loading state
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showAIResponse, setShowAIResponse] = useState(false);
+  const [showFullContent, setShowFullContent] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [notes, setNotes] = useState('');
+  
+  // Session-based sync period state (default to 1 day)
+  const [sessionSyncPeriod, setSessionSyncPeriod] = useState(1);
+  
+  // Auto-reply
+  const { 
+    settings: autoReplySettings, 
+    sendAutoReply,
+    toggleAutoReply,
+    saveSettings: saveAutoReplySettings
+  } = useAutoReply();
+  
+  // Additional state for auto-reply management
   const [autoReplyingLeads, setAutoReplyingLeads] = useState<Set<string>>(new Set());
 
   // Confirmation modal state
@@ -725,7 +745,7 @@ const LeadsPage = () => {
       // Trigger animation and confetti only when marking as answered
       if (answered) {
         setIsAnimating(true);
-        triggerSuccess(); // Add confetti celebration!
+        confetti.triggerSuccess(); // Add confetti celebration!
         setTimeout(() => setIsAnimating(false), 1000);
       }
 
@@ -774,17 +794,26 @@ const LeadsPage = () => {
     }
   };
 
-  const handleSyncGmail = async (period: number = 7) => {
+  const handleSyncGmail = async (period?: number) => {
     try {
       setShowDeleted(false); // Switch back to main view when syncing
       
+      // Use provided period or fall back to session sync period
+      const syncPeriod = period !== undefined ? period : sessionSyncPeriod;
+      
+      // If a specific period was provided, update the session sync period
+      if (period !== undefined) {
+        setSessionSyncPeriod(period);
+      }
+      
       console.log('🔄 Starting Gmail sync...');
+      console.log(`📅 Sync period: ${syncPeriod} days (session default: ${sessionSyncPeriod} days)`);
       
       // Get current lead IDs before sync
       const leadIdsBefore = new Set(allLeads.map(lead => lead.id));
       
       // Sync Gmail and get the result with new leads data
-      const syncResult = await syncGmailLeads(period);
+      const syncResult = await syncGmailLeads(syncPeriod);
       
       console.log('📧 Gmail sync result:', {
         newLeadsCount: syncResult?.new_leads_data?.length || 0,
@@ -1122,7 +1151,7 @@ const LeadsPage = () => {
                 variant={isSelectionMode ? 'default' : 'outline'}
                 onClick={toggleSelectionMode}
                 className="rounded-xl"
-              >
+              > 
                 {isSelectionMode ? (
                   <>
                     <X className="h-4 w-4 mr-2" />
@@ -1139,29 +1168,61 @@ const LeadsPage = () => {
               {/* Auto-Reply Toggle */}
               {!showDeleted && <AutoReplyToggle />}
               
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    disabled={syncLoading}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
-                  >
-                    <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-                    Sync Gmail
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleSyncGmail(1)}>
-                    Last 24 hours
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSyncGmail(3)}>
-                    Last 3 days
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleSyncGmail(7)}>
-                    Last 7 days
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {/* Split Sync Gmail Button */}
+              <div className="flex rounded-xl overflow-hidden">
+                <Button
+                  disabled={syncLoading}
+                  onClick={() => handleSyncGmail()}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-l-xl border-r border-blue-500/30"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
+                  Sync Gmail
+                  {sessionSyncPeriod === 1 && " (24h)"}
+                  {sessionSyncPeriod === 3 && " (3d)"}
+                  {sessionSyncPeriod === 7 && " (7d)"}
+                  {sessionSyncPeriod === 30 && " (1m)"}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      disabled={syncLoading}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-r-xl px-2"
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem 
+                      onClick={() => handleSyncGmail(1)}
+                      className={cn(sessionSyncPeriod === 1 && "bg-blue-50")}
+                    >
+                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 1 && "opacity-0")} />
+                      Last 24 hours
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleSyncGmail(3)}
+                      className={cn(sessionSyncPeriod === 3 && "bg-blue-50")}
+                    >
+                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 3 && "opacity-0")} />
+                      Last 3 days
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleSyncGmail(7)}
+                      className={cn(sessionSyncPeriod === 7 && "bg-blue-50")}
+                    >
+                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 7 && "opacity-0")} />
+                      Last 7 days
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleSyncGmail(30)}
+                      className={cn(sessionSyncPeriod === 30 && "bg-blue-50")}
+                    >
+                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 30 && "opacity-0")} />
+                      Last month
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
 
