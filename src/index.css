@@ -108,6 +108,9 @@
 /* Import Inter font */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
+/* Import features page styles */
+@import './styles/features.css';
+
 @layer utilities {
   .animate-gradient {
     background-size: 300%;
