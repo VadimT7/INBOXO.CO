@@ -1,6 +1,7 @@
 # InboxFlow - AI-Powered Lead Management Platform
 
-Transform your Gmail inbox into a lead-converting machine with AI-powered lead classification, automated responses, and comprehensive analytics.
+Transform your Gmail inbox into a lead-converting machine with AI-powered lead classification, automated responses, and comprehensive analytics. Your all-in-one tool
+to cheat and WIN in lead conversion.
 
 ## 🚀 Features
 
