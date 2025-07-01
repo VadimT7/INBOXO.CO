@@ -9,8 +9,9 @@ max_rows = 1000
 
 [auth]
 enabled = true
-site_url = "https://inboxo.co"
+site_url = "https://www.inboxo.co"
 additional_redirect_urls = [
+    "https://www.inboxo.co",
     "https://inboxo.co",
     "https://inboxflows-hero-glow.vercel.app",
     "http://localhost:8080"
@@ -20,7 +21,7 @@ additional_redirect_urls = [
 enabled = true
 client_id = "929737682525-i8bguru1154i65a7geerhi0pd9qqv68l.apps.googleusercontent.com"
 secret = "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"
-redirect_uri = "https://inboxo.co/auth/v1/callback"
+redirect_uri = "https://www.inboxo.co/auth/v1/callback"
 
 [functions]
 enabled = true
