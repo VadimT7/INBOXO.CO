@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useGmailSync } from '@/hooks/useGmailSync';
+import { useAutoGmailSync } from '@/hooks/useAutoGmailSync';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -29,6 +30,7 @@ interface Lead {
 const OnboardingPage = () => {
   const { user } = useAuthSession();
   const { syncGmailLeads } = useGmailSync();
+  const { isAutoSyncEnabled } = useAutoGmailSync();
   const navigate = useNavigate();
   
   const [step, setStep] = useState(1);

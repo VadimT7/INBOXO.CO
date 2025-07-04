@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useGmailSync } from '@/hooks/useGmailSync';
+import { useAutoGmailSync } from '@/hooks/useAutoGmailSync';
 import { useResponseTimeAnalytics } from '@/hooks/useResponseTimeAnalytics';
 import { useSubscriptionStatus } from '@/hooks/useSubscriptionStatus';
 import { useAutoReply } from '@/hooks/useAutoReply';
@@ -100,6 +101,25 @@ const LeadsPage = () => {
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuthSession();
   const { syncGmailLeads, loading: syncLoading } = useGmailSync();
+  const { 
+    autoSyncLoading, 
+    lastAutoSync, 
+    isAutoSyncEnabled, 
+    isAnySyncLoading,
+    triggerAutoSync 
+  } = useAutoGmailSync(
+    (newLeads) => {
+      // Process new leads for auto-reply when found by auto-sync
+      if (newLeads.length > 0 && autoReplySettings.enabled) {
+        console.log(`🤖 Auto-sync found ${newLeads.length} new leads, processing for auto-reply...`);
+        processNewLeadsForAutoReply(newLeads);
+      }
+    },
+    () => {
+      // Refresh leads list when auto-sync completes
+      fetchLeads();
+    }
+  );
   const { markLeadAsResponded } = useResponseTimeAnalytics();
   const { hasValidAccess } = useSubscriptionStatus();
   const [allLeads, setAllLeads] = useState<Lead[]>([]);
@@ -796,6 +816,12 @@ const LeadsPage = () => {
 
   const handleSyncGmail = async (period?: number) => {
     try {
+      // Don't allow manual sync if auto-sync is running
+      if (autoSyncLoading) {
+        toast.info('Auto-sync is currently running, please wait...');
+        return;
+      }
+
       setShowDeleted(false); // Switch back to main view when syncing
       
       // Use provided period or fall back to session sync period
@@ -806,7 +832,7 @@ const LeadsPage = () => {
         setSessionSyncPeriod(period);
       }
       
-      console.log('🔄 Starting Gmail sync...');
+      console.log('🔄 Starting manual Gmail sync...');
       console.log(`📅 Sync period: ${syncPeriod} days (session default: ${sessionSyncPeriod} days)`);
       
       // Get current lead IDs before sync
@@ -1168,24 +1194,39 @@ const LeadsPage = () => {
               {/* Auto-Reply Toggle */}
               {!showDeleted && <AutoReplyToggle />}
               
+              {/* Auto-Sync Status Indicator */}
+              {isAutoSyncEnabled && (
+                <div className="flex items-center space-x-2 text-xs text-slate-500">
+                  <div className="flex items-center">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                    <span>Auto-sync: ON</span>
+                  </div>
+                  {lastAutoSync && (
+                    <span className="text-slate-400">
+                      Last: {new Date(lastAutoSync).toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+              )}
+              
               {/* Split Sync Gmail Button */}
               <div className="flex rounded-xl overflow-hidden">
                 <Button
-                  disabled={syncLoading}
+                  disabled={isAnySyncLoading}
                   onClick={() => handleSyncGmail()}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-l-xl border-r border-blue-500/30"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${syncLoading ? 'animate-spin' : ''}`} />
-                  Sync Gmail
-                  {sessionSyncPeriod === 1 && " (24h)"}
-                  {sessionSyncPeriod === 3 && " (3d)"}
-                  {sessionSyncPeriod === 7 && " (7d)"}
-                  {sessionSyncPeriod === 30 && " (1m)"}
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isAnySyncLoading ? 'animate-spin' : ''}`} />
+                  {autoSyncLoading ? 'Auto-Syncing...' : 'Sync Gmail'}
+                  {!autoSyncLoading && sessionSyncPeriod === 1 && " (24h)"}
+                  {!autoSyncLoading && sessionSyncPeriod === 3 && " (3d)"}
+                  {!autoSyncLoading && sessionSyncPeriod === 7 && " (7d)"}
+                  {!autoSyncLoading && sessionSyncPeriod === 30 && " (1m)"}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
-                      disabled={syncLoading}
+                      disabled={isAnySyncLoading}
                       className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-r-xl px-2"
                     >
                       <ChevronDown className="h-4 w-4" />
