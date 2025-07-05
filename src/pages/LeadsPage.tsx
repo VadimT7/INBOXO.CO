@@ -105,8 +105,8 @@ const LeadsPage = () => {
     autoSyncLoading, 
     lastAutoSync, 
     isAutoSyncEnabled, 
-    isAnySyncLoading,
-    triggerAutoSync 
+    triggerAutoSync,
+    isServerSyncEnabled
   } = useAutoGmailSync(
     (newLeads) => {
       // Process new leads for auto-reply when found by auto-sync
@@ -115,9 +115,16 @@ const LeadsPage = () => {
         processNewLeadsForAutoReply(newLeads);
       }
     },
-    () => {
+    async () => {
       // Refresh leads list when auto-sync completes
-      fetchLeads();
+      console.log('🔄 Auto-sync completed, refreshing leads list...');
+      try {
+        await fetchLeads();
+        console.log('✅ Leads list refreshed successfully after auto-sync');
+      } catch (error) {
+        console.error('❌ Error refreshing leads after auto-sync:', error);
+        toast.error('Failed to refresh leads after auto-sync');
+      }
     }
   );
   const { markLeadAsResponded } = useResponseTimeAnalytics();
@@ -818,7 +825,9 @@ const LeadsPage = () => {
     try {
       // Don't allow manual sync if auto-sync is running
       if (autoSyncLoading) {
-        toast.info('Auto-sync is currently running, please wait...');
+        toast.info('🔄 Auto-sync is currently running, please wait...', {
+          duration: 3000,
+        });
         return;
       }
 
@@ -835,6 +844,12 @@ const LeadsPage = () => {
       console.log('🔄 Starting manual Gmail sync...');
       console.log(`📅 Sync period: ${syncPeriod} days (session default: ${sessionSyncPeriod} days)`);
       
+      // Show immediate feedback
+      toast.info(`🔄 Starting manual sync (${syncPeriod} day${syncPeriod === 1 ? '' : 's'})...`, {
+        duration: 2000,
+        id: 'manual-sync-start'
+      });
+      
       // Get current lead IDs before sync
       const leadIdsBefore = new Set(allLeads.map(lead => lead.id));
       
@@ -847,7 +862,14 @@ const LeadsPage = () => {
         autoReplyEnabled: autoReplySettings.enabled
       });
       
+      // Show success notification
+      toast.success('✅ Manual sync completed!', {
+        duration: 2000,
+        id: 'manual-sync-complete'
+      });
+      
       // Refresh all leads in the UI and get the updated data
+      console.log('🔄 Refreshing leads list after manual sync...');
       const updatedLeads = await fetchLeads();
       
       // Find truly new leads by comparing IDs
@@ -862,6 +884,17 @@ const LeadsPage = () => {
           subject: l.subject 
         }))
       });
+
+      // Show notification about new leads found
+      if (newLeads.length > 0) {
+        toast.success(`📧 Found ${newLeads.length} new lead${newLeads.length === 1 ? '' : 's'}!`, {
+          duration: 4000,
+        });
+      } else {
+        toast.info('📭 No new leads found', {
+          duration: 2000,
+        });
+      }
       
       // Process new leads for auto-reply if any were found
       if (newLeads.length > 0 && autoReplySettings.enabled) {
@@ -876,6 +909,9 @@ const LeadsPage = () => {
       }
     } catch (error) {
       console.error('Gmail sync error:', error);
+      toast.error('❌ Manual sync failed. Please try again.', {
+        duration: 4000,
+      });
     }
   };
 
@@ -1049,6 +1085,19 @@ const LeadsPage = () => {
     }
   }, [allLeads, autoReplySettings.enabled, autoReplyingLeads, processNewLeadsForAutoReply]); // Watch for changes in leads, auto-reply settings, or processing state
 
+  // Combined loading state for both manual and auto sync
+  const isAnySyncLoading = syncLoading || autoSyncLoading;
+  
+  // Debug logging for sync states
+  useEffect(() => {
+    console.log('🔍 Sync States:', {
+      syncLoading,
+      autoSyncLoading,
+      isAnySyncLoading,
+      timestamp: new Date().toLocaleTimeString()
+    });
+  }, [syncLoading, autoSyncLoading, isAnySyncLoading]);
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -1195,15 +1244,27 @@ const LeadsPage = () => {
               {!showDeleted && <AutoReplyToggle />}
               
               {/* Auto-Sync Status Indicator */}
-              {isAutoSyncEnabled && (
-                <div className="flex items-center space-x-2 text-xs text-slate-500">
-                  <div className="flex items-center">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-                    <span>Auto-sync: ON</span>
+              {!showDeleted && isAutoSyncEnabled && (
+                <div className="flex items-center space-x-2 px-3 py-2 bg-white/70 backdrop-blur-sm rounded-xl border border-white/20">
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <div className={`w-2 h-2 rounded-full ${autoSyncLoading ? 'bg-blue-500' : 'bg-green-500'}`} />
+                      {!autoSyncLoading && (
+                        <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping opacity-75" />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium text-slate-700">
+                      {autoSyncLoading ? 'Syncing...' : (isServerSyncEnabled ? 'Auto-sync: ALWAYS ON' : 'Auto-sync: ON')}
+                    </span>
                   </div>
-                  {lastAutoSync && (
-                    <span className="text-slate-400">
-                      Last: {new Date(lastAutoSync).toLocaleTimeString()}
+                  {lastAutoSync && !autoSyncLoading && (
+                    <span className="text-xs text-slate-500">
+                      {new Date(lastAutoSync).toLocaleTimeString()}
+                    </span>
+                  )}
+                  {isServerSyncEnabled && (
+                    <span className="text-xs text-green-600 font-medium">
+                      24/7
                     </span>
                   )}
                 </div>
@@ -1217,11 +1278,11 @@ const LeadsPage = () => {
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-l-xl border-r border-blue-500/30"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isAnySyncLoading ? 'animate-spin' : ''}`} />
-                  {autoSyncLoading ? 'Auto-Syncing...' : 'Sync Gmail'}
-                  {!autoSyncLoading && sessionSyncPeriod === 1 && " (24h)"}
-                  {!autoSyncLoading && sessionSyncPeriod === 3 && " (3d)"}
-                  {!autoSyncLoading && sessionSyncPeriod === 7 && " (7d)"}
-                  {!autoSyncLoading && sessionSyncPeriod === 30 && " (1m)"}
+                  {isAnySyncLoading ? 'Syncing...' : 'Sync Gmail'}
+                  {!isAnySyncLoading && sessionSyncPeriod === 1 && " (24h)"}
+                  {!isAnySyncLoading && sessionSyncPeriod === 3 && " (3d)"}
+                  {!isAnySyncLoading && sessionSyncPeriod === 7 && " (7d)"}
+                  {!isAnySyncLoading && sessionSyncPeriod === 30 && " (1m)"}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

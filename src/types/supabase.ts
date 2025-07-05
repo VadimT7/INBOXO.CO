@@ -132,6 +132,9 @@ export interface Database {
           updated_at: string | null
           username: string | null
           website: string | null
+          google_refresh_token: string | null
+          last_auto_sync: string | null
+          auto_sync_enabled: boolean | null
         }
         Insert: {
           avatar_url?: string | null
@@ -140,6 +143,9 @@ export interface Database {
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          google_refresh_token?: string | null
+          last_auto_sync?: string | null
+          auto_sync_enabled?: boolean | null
         }
         Update: {
           avatar_url?: string | null
@@ -148,6 +154,9 @@ export interface Database {
           updated_at?: string | null
           username?: string | null
           website?: string | null
+          google_refresh_token?: string | null
+          last_auto_sync?: string | null
+          auto_sync_enabled?: boolean | null
         }
         Relationships: [
           {

@@ -70,20 +70,30 @@ export function useAuthSession(): AuthSession {
       console.log('Saving Google access token for user:', currentSession.user.id);
       
       try {
+        // Prepare update data
+        const updateData: any = {
+          id: currentSession.user.id,
+          updated_at: new Date().toISOString()
+        };
+
+        // Store refresh token for server-side auto-sync (if available)
+        if (currentSession.provider_refresh_token) {
+          console.log('✅ Storing Google refresh token for auto-sync');
+          updateData.google_refresh_token = currentSession.provider_refresh_token;
+          updateData.auto_sync_enabled = true; // Enable auto-sync when refresh token is available
+        }
+
         const { error: profileError } = await supabase
           .from('profiles')
-          .upsert(
-            {
-              id: currentSession.user.id,
-              updated_at: new Date().toISOString()
-            },
-            { onConflict: 'id' }
-          );
+          .upsert(updateData, { onConflict: 'id' });
 
         if (profileError) {
           console.error('Error saving profile/token:', profileError);
         } else {
-          console.log('✓ Google access token saved successfully');
+          console.log('✅ Google tokens saved successfully for server-side auto-sync');
+          if (currentSession.provider_refresh_token) {
+            console.log('🔄 Server-side auto-sync is now enabled and will run every 5 minutes');
+          }
         }
       } catch (error) {
         console.error('Error updating profile with token:', error);
