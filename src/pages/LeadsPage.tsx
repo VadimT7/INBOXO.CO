@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useAuthSession } from '@/hooks/useAuthSession';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -156,6 +156,9 @@ const LeadsPage = () => {
   
   // Additional state for auto-reply management
   const [autoReplyingLeads, setAutoReplyingLeads] = useState<Set<string>>(new Set());
+  
+  // Track processed leads to prevent infinite loops
+  const processedLeadsRef = useRef<Set<string>>(new Set());
 
   // Confirmation modal state
   const [confirmationModal, setConfirmationModal] = useState<{
@@ -543,7 +546,20 @@ const LeadsPage = () => {
     console.log('Processing new leads for auto-reply:', newLeads.length);
     
     // Only process leads that haven't been answered yet and haven't been auto-replied to
-    const unansweredLeads = newLeads.filter(lead => !lead.answered && !lead.auto_replied);
+    const unansweredLeads = newLeads.filter(lead => {
+      const isAnswered = lead.answered === true;
+      const isAutoReplied = lead.auto_replied === true;
+      const isProcessed = processedLeadsRef.current.has(lead.id);
+      
+      console.log(`🔍 Lead ${lead.sender_email}:`, {
+        answered: isAnswered,
+        auto_replied: isAutoReplied,
+        processed: isProcessed,
+        eligible: !isAnswered && !isAutoReplied && !isProcessed
+      });
+      
+      return !isAnswered && !isAutoReplied && !isProcessed;
+    });
     
     console.log(`Found ${unansweredLeads.length} unanswered leads eligible for auto-reply`);
     console.log('Lead statuses:', unansweredLeads.map(l => ({ 
@@ -559,11 +575,23 @@ const LeadsPage = () => {
     );
     
     console.log(`🔥 Found ${leadsToAutoReply.length} hot/warm leads to auto-reply`);
+    console.log('Eligible leads for auto-reply:', leadsToAutoReply.map(l => ({
+      id: l.id,
+      email: l.sender_email,
+      status: l.status,
+      answered: l.answered,
+      auto_replied: l.auto_replied
+    })));
     
     if (leadsToAutoReply.length === 0) {
       console.log('❄️ No hot/warm leads found for auto-reply');
       return;
     }
+    
+    // Mark leads as being processed to prevent re-processing
+    leadsToAutoReply.forEach(lead => {
+      processedLeadsRef.current.add(lead.id);
+    });
     
     // Add all leads to loading state at once
     setAutoReplyingLeads(prev => {
@@ -600,10 +628,14 @@ const LeadsPage = () => {
           return { lead, success: true };
         } else {
           console.error(`❌ Failed to auto-reply to ${lead.sender_email}`);
+          // Remove from processed set if failed so it can be retried later
+          processedLeadsRef.current.delete(lead.id);
           return { lead, success: false };
         }
       } catch (error) {
         console.error(`❌ Error during auto-reply to ${lead.sender_email}:`, error);
+        // Remove from processed set if failed so it can be retried later
+        processedLeadsRef.current.delete(lead.id);
         return { lead, success: false, error };
       } finally {
         // Remove lead from loading state
@@ -633,7 +665,7 @@ const LeadsPage = () => {
         toast.error(`Failed to auto-reply to all ${failCount} leads`, { duration: 4000 });
       }
     }
-  }, [autoReplySettings.enabled, sendAutoReply]);
+  }, [autoReplySettings.enabled, sendAutoReply, autoReplySettings]);
 
   // Test auto-reply for debugging
   const testAutoReply = async () => {
@@ -973,6 +1005,8 @@ const LeadsPage = () => {
   useEffect(() => {
     if (!authLoading && user) {
       fetchLeads();
+      // Clear processed leads cache when user changes or on initial load
+      processedLeadsRef.current.clear();
     } else if (!authLoading && !user) {
       setAllLeads([]);
       setLoading(false);
@@ -1059,31 +1093,100 @@ const LeadsPage = () => {
   const isAllSelected = filteredLeads.length > 0 && selectedLeads.length === filteredLeads.length;
   const isSomeSelected = selectedLeads.length > 0 && selectedLeads.length < filteredLeads.length;
 
+  // Clear processed leads when auto-reply is disabled/enabled
+  useEffect(() => {
+    if (!autoReplySettings.enabled) {
+      // Clear processed leads when auto-reply is disabled so they can be processed again when re-enabled
+      processedLeadsRef.current.clear();
+      console.log('🔄 Auto-reply disabled, cleared processed leads cache');
+    } else {
+      console.log('✅ Auto-reply enabled, processed leads cache size:', processedLeadsRef.current.size);
+    }
+  }, [autoReplySettings.enabled]);
+
+  // Debug function to manually clear processed leads cache
+  const clearProcessedLeadsCache = () => {
+    processedLeadsRef.current.clear();
+    console.log('🧹 Manually cleared processed leads cache');
+    toast.info('Processed leads cache cleared - auto-reply will retry all eligible leads');
+  };
+
   // Effect to watch for new leads and trigger auto-reply
   useEffect(() => {
+    console.log('🔍 Auto-reply effect triggered:', {
+      autoReplyEnabled: autoReplySettings.enabled,
+      totalLeads: allLeads.length,
+      processedCacheSize: processedLeadsRef.current.size,
+      autoReplyingLeadsSize: autoReplyingLeads.size
+    });
+
     // Only run if auto-reply is enabled and we have leads
-    if (!autoReplySettings.enabled || allLeads.length === 0) return;
+    if (!autoReplySettings.enabled || allLeads.length === 0) {
+      if (!autoReplySettings.enabled) {
+        console.log('❌ Auto-reply is disabled, skipping effect');
+      }
+      if (allLeads.length === 0) {
+        console.log('📭 No leads available, skipping effect');
+      }
+      return;
+    }
     
     // Find leads that need auto-reply (hot/warm, not answered, not auto-replied)
-    const leadsNeedingAutoReply = allLeads.filter(lead => 
-      !lead.is_deleted &&
-      !lead.answered && 
-      !lead.auto_replied &&
-      (lead.status === 'hot' || lead.status === 'warm') &&
-      !autoReplyingLeads.has(lead.id) // Not already being processed
-    );
+    const leadsNeedingAutoReply = allLeads.filter(lead => {
+      const isDeleted = lead.is_deleted === true;
+      const isAnswered = lead.answered === true;
+      const isAutoReplied = lead.auto_replied === true;
+      const isHotOrWarm = lead.status === 'hot' || lead.status === 'warm';
+      const isBeingProcessed = autoReplyingLeads.has(lead.id);
+      const isAlreadyProcessed = processedLeadsRef.current.has(lead.id);
+      
+      const eligible = !isDeleted && !isAnswered && !isAutoReplied && isHotOrWarm && !isBeingProcessed && !isAlreadyProcessed;
+      
+      if (isHotOrWarm && !isDeleted) {
+        console.log(`🔍 Lead ${lead.sender_email} (${lead.status}):`, {
+          deleted: isDeleted,
+          answered: isAnswered,
+          auto_replied: isAutoReplied,
+          hot_or_warm: isHotOrWarm,
+          being_processed: isBeingProcessed,
+          already_processed: isAlreadyProcessed,
+          eligible: eligible
+        });
+      }
+      
+      return eligible;
+    });
+    
+    console.log('🔍 Leads analysis for auto-reply:', {
+      totalActiveLeads: allLeads.filter(l => !l.is_deleted).length,
+      hotWarmLeads: allLeads.filter(l => !l.is_deleted && (l.status === 'hot' || l.status === 'warm')).length,
+      unansweredHotWarm: allLeads.filter(l => !l.is_deleted && !l.answered && (l.status === 'hot' || l.status === 'warm')).length,
+      notAutoReplied: allLeads.filter(l => !l.is_deleted && !l.answered && !l.auto_replied && (l.status === 'hot' || l.status === 'warm')).length,
+      eligibleForAutoReply: leadsNeedingAutoReply.length,
+      processedIds: Array.from(processedLeadsRef.current),
+      autoReplyingIds: Array.from(autoReplyingLeads)
+    });
     
     if (leadsNeedingAutoReply.length > 0) {
       console.log('🚨 Found leads needing auto-reply:', leadsNeedingAutoReply.map(l => ({
         id: l.id,
         email: l.sender_email,
-        status: l.status
+        status: l.status,
+        answered: l.answered,
+        auto_replied: l.auto_replied
       })));
+      
+      // Mark leads as being processed to prevent re-processing
+      leadsNeedingAutoReply.forEach(lead => {
+        processedLeadsRef.current.add(lead.id);
+      });
       
       // Process them immediately
       processNewLeadsForAutoReply(leadsNeedingAutoReply);
+    } else {
+      console.log('📭 No leads need auto-reply at this time');
     }
-  }, [allLeads, autoReplySettings.enabled, autoReplyingLeads, processNewLeadsForAutoReply]); // Watch for changes in leads, auto-reply settings, or processing state
+  }, [allLeads, autoReplySettings.enabled, autoReplyingLeads]); // Removed processNewLeadsForAutoReply from dependencies
 
   // Combined loading state for both manual and auto sync
   const isAnySyncLoading = syncLoading || autoSyncLoading;
@@ -1244,7 +1347,7 @@ const LeadsPage = () => {
               {!showDeleted && <AutoReplyToggle />}
               
               {/* Auto-Sync Status Indicator */}
-              {!showDeleted && isAutoSyncEnabled && (
+              {/* {!showDeleted && isAutoSyncEnabled && (
                 <div className="flex items-center space-x-2 px-3 py-2 bg-white/70 backdrop-blur-sm rounded-xl border border-white/20">
                   <div className="flex items-center space-x-2">
                     <div className="relative">
@@ -1268,62 +1371,101 @@ const LeadsPage = () => {
                     </span>
                   )}
                 </div>
-              )}
+              )} */}
               
               {/* Split Sync Gmail Button */}
-              <div className="flex rounded-xl overflow-hidden">
-                <Button
-                  disabled={isAnySyncLoading}
-                  onClick={() => handleSyncGmail()}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-l-xl border-r border-blue-500/30"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isAnySyncLoading ? 'animate-spin' : ''}`} />
-                  {isAnySyncLoading ? 'Syncing...' : 'Sync Gmail'}
-                  {!isAnySyncLoading && sessionSyncPeriod === 1 && " (24h)"}
-                  {!isAnySyncLoading && sessionSyncPeriod === 3 && " (3d)"}
-                  {!isAnySyncLoading && sessionSyncPeriod === 7 && " (7d)"}
-                  {!isAnySyncLoading && sessionSyncPeriod === 30 && " (1m)"}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      disabled={isAnySyncLoading}
-                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-r-xl px-2"
+              <div className="flex flex-col items-end space-y-2">
+                <div className="flex rounded-xl overflow-hidden">
+                  <Button
+                    disabled={isAnySyncLoading}
+                    onClick={() => handleSyncGmail()}
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-l-xl border-r border-blue-500/30"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isAnySyncLoading ? 'animate-spin' : ''}`} />
+                    {isAnySyncLoading ? 'Syncing...' : 'Sync Gmail'}
+                    {!isAnySyncLoading && sessionSyncPeriod === 1 && " (24h)"}
+                    {!isAnySyncLoading && sessionSyncPeriod === 3 && " (3d)"}
+                    {!isAnySyncLoading && sessionSyncPeriod === 7 && " (7d)"}
+                    {!isAnySyncLoading && sessionSyncPeriod === 30 && " (1m)"}
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        disabled={isAnySyncLoading}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-none rounded-r-xl px-2"
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem 
+                        onClick={() => handleSyncGmail(1)}
+                        className={cn(sessionSyncPeriod === 1 && "bg-blue-50")}
+                      >
+                        <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 1 && "opacity-0")} />
+                        Last 24 hours
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleSyncGmail(3)}
+                        className={cn(sessionSyncPeriod === 3 && "bg-blue-50")}
+                      >
+                        <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 3 && "opacity-0")} />
+                        Last 3 days
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleSyncGmail(7)}
+                        className={cn(sessionSyncPeriod === 7 && "bg-blue-50")}
+                      >
+                        <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 7 && "opacity-0")} />
+                        Last 7 days
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleSyncGmail(30)}
+                        className={cn(sessionSyncPeriod === 30 && "bg-blue-50")}
+                      >
+                        <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 30 && "opacity-0")} />
+                        Last month
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                
+                {/* Last Sync Indicator */}
+                <AnimatePresence>
+                  {lastAutoSync && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      className="flex items-center space-x-1.5 text-xs text-slate-500"
                     >
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => handleSyncGmail(1)}
-                      className={cn(sessionSyncPeriod === 1 && "bg-blue-50")}
-                    >
-                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 1 && "opacity-0")} />
-                      Last 24 hours
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleSyncGmail(3)}
-                      className={cn(sessionSyncPeriod === 3 && "bg-blue-50")}
-                    >
-                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 3 && "opacity-0")} />
-                      Last 3 days
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleSyncGmail(7)}
-                      className={cn(sessionSyncPeriod === 7 && "bg-blue-50")}
-                    >
-                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 7 && "opacity-0")} />
-                      Last 7 days
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleSyncGmail(30)}
-                      className={cn(sessionSyncPeriod === 30 && "bg-blue-50")}
-                    >
-                      <Check className={cn("h-4 w-4 mr-2", sessionSyncPeriod !== 30 && "opacity-0")} />
-                      Last month
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <Clock className="h-3 w-3" />
+                      <span>
+                        Last sync: {(() => {
+                          const now = new Date();
+                          const syncTime = new Date(lastAutoSync);
+                          const diffMs = now.getTime() - syncTime.getTime();
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMs / 3600000);
+                          const diffDays = Math.floor(diffMs / 86400000);
+                          
+                          if (diffMins < 1) return 'just now';
+                          if (diffMins < 60) return `${diffMins}m ago`;
+                          if (diffHours < 24) return `${diffHours}h ago`;
+                          if (diffDays === 1) return 'yesterday';
+                          if (diffDays < 7) return `${diffDays}d ago`;
+                          return syncTime.toLocaleDateString();
+                        })()}
+                      </span>
+                      {isServerSyncEnabled && (
+                        <div className="flex items-center space-x-1">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-green-600 font-medium">Auto</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </div>

@@ -13,48 +13,54 @@ export async function classifyEmailWithAI(subject: string, body: string, senderE
     };
   }
 
-  const prompt = `Analyze this email and determine if it's a genuine business inquiry asking for YOUR services.
+  const prompt = `You are a business lead classifier. Classify emails as leads if they show genuine business interest or inquiries.
 
-Email:
+Email to analyze:
 From: ${senderEmail}
 Subject: ${subject}
 Body: ${body}
 
-IMPORTANT CLASSIFICATION FACTORS:
-1. URGENCY - Look for urgent language, time sensitivity, caps lock, exclamation marks
-2. INTENT - Clear request for services, quotes, or information
-3. BUDGET - Mentions of specific budget or price ranges
-4. SPECIFICITY - Detailed requirements or specific questions
-5. TONE - Professional inquiry vs promotional/spam
+CLASSIFICATION CRITERIA:
 
-CLASSIFICATION RULES:
-- HOT LEAD: Urgent requests, specific budgets mentioned, immediate needs, clear buying intent
-- WARM LEAD: General inquiries with interest, asking for quotes, moderate urgency
-- COLD LEAD: Vague interest, just gathering information, no urgency
-- NOT A LEAD: Promotional emails, newsletters, trying to sell TO us
+🔥 HOT LEAD:
+- Urgent requests with specific needs
+- Budget mentioned or immediate timeline
+- Clear project requirements
+- Ready to proceed language
+- Examples: "URGENT: Need website, $5000 budget", "Can you start this week?"
 
-Examples of HOT LEADS:
-- "URGENT: Need roof repair ASAP, budget $10,000"
-- "Can you start this week? I need immediate help"
-- "Ready to proceed with $5000 budget for your services"
+🔥 WARM LEAD:
+- Clear business inquiry or interest
+- Asking for quotes, pricing, or information
+- Specific service needs mentioned
+- Professional tone from potential customer
+- Examples: "Looking for web developer", "Need help with marketing", "What are your rates?"
 
-Examples of WARM LEADS:
-- "I'm interested in your services, can you send a quote?"
-- "Looking to renovate next month, what are your rates?"
-- "Please provide pricing for your landscaping services"
+❄️ COLD LEAD:
+- General interest or information gathering
+- Vague inquiries without specific needs
+- May be researching for future use
+- Examples: "What services do you offer?", "Tell me about your company"
 
-Examples of COLD LEADS:
-- "Just browsing your services for future reference"
-- "Might need this someday, what do you offer?"
-- "Gathering information for next year's project"
+🚫 NOT A LEAD:
+- Promotional emails or newsletters
+- Job postings or recruitment
+- Product sales emails (selling TO you)
+- Automated notifications
+- Investment/trading promotions
+- Shopping/e-commerce promotions
+- Social media notifications
 
-Examples of NON-LEADS:
-- Marketing emails, newsletters, promotions
-- Emails trying to sell services TO you
-- Automated notifications or system emails
+IMPORTANT GUIDELINES:
+- Focus on INTENT: Are they asking for services or showing business interest?
+- Be REASONABLE: Don't require perfect business language - real customers write casually
+- Consider CONTEXT: Personal emails from individuals can be legitimate leads
+- When UNCERTAIN: Classify as a lead if there's any reasonable business intent
 
 Respond with ONLY this JSON format:
-{"isLead": boolean, "classification": "hot"|"warm"|"cold"|"unclassified", "confidence": 0-100, "reasoning": "brief explanation"}`;
+{"isLead": boolean, "classification": "hot"|"warm"|"cold"|"unclassified", "confidence": 0-100, "reasoning": "brief explanation"}
+
+Be thorough but not overly strict. Real business inquiries come in many forms.`;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -68,15 +74,15 @@ Respond with ONLY this JSON format:
         messages: [
           {
             role: 'system',
-            content: 'You are an expert at identifying and classifying business leads. Pay special attention to URGENCY indicators like "URGENT", "ASAP", caps lock, time sensitivity, and immediate needs. These should typically be classified as HOT leads if they show genuine interest. A lead with clear intent and urgency should NEVER be classified as cold.'
+            content: 'You are a business lead classifier. Your goal is to identify genuine business inquiries while filtering out obvious spam. Be reasonable and not overly strict - real customers often write casual emails. Focus on business intent rather than perfect language.'
           },
           {
             role: 'user',
             content: prompt
           }
         ],
-        temperature: 0.1,
-        max_tokens: 200
+        temperature: 0.1, // Balanced temperature for consistency
+        max_tokens: 150
       }),
     });
 
@@ -101,10 +107,25 @@ Respond with ONLY this JSON format:
       
       const result = JSON.parse(aiResponse);
       
+      // More reasonable validation - lower confidence threshold
+      const confidence = Number(result.confidence) || 0;
+      const isLead = Boolean(result.isLead);
+      
+      // Only reject if confidence is very low (50% instead of 70%)
+      if (isLead && confidence < 50) {
+        console.log(`⚠️ AI classified as lead but confidence too low (${confidence}%), marking as not a lead`);
+        return {
+          isLead: false,
+          classification: 'unclassified',
+          confidence: confidence,
+          reasoning: `${result.reasoning} (Rejected: confidence too low)`
+        };
+      }
+      
       return {
-        isLead: Boolean(result.isLead),
+        isLead: isLead,
         classification: result.classification || 'unclassified',
-        confidence: Number(result.confidence) || 0,
+        confidence: confidence,
         reasoning: result.reasoning || 'AI classification'
       };
     } catch (parseError) {

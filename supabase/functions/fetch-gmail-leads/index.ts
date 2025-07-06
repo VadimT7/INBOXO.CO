@@ -53,14 +53,15 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Get existing leads to avoid duplicates and ensure consistency
+    // Get existing leads to avoid duplicates
     const { data: existingLeads } = await supabase
       .from('leads')
-      .select('gmail_message_id, sender_email, subject')
+      .select('gmail_message_id, sender_email, subject, user_id')
       .eq('user_id', user.id);
 
     const existingMessageIds = new Set(existingLeads?.map(lead => lead.gmail_message_id) || []);
-    console.log(`Found ${existingMessageIds.size} existing leads in database`);
+    
+    console.log(`Found ${existingMessageIds.size} existing leads for current user`);
 
     // Get user's email address to exclude their own messages
     let userEmail = user.email;
@@ -108,9 +109,9 @@ const handler = async (req: Request): Promise<Response> => {
         try {
           console.log(`Processing incoming message ${i + 1}/${sortedMessages.length}: ${message.id}`);
           
-          // Skip if we already have this message
+          // Skip if we already have this message for the CURRENT user
           if (existingMessageIds.has(message.id)) {
-            console.log(`Skipping duplicate message: ${message.id}`);
+            console.log(`Skipping duplicate message for current user: ${message.id}`);
             skippedDuplicates++;
             continue;
           }
@@ -135,6 +136,13 @@ const handler = async (req: Request): Promise<Response> => {
           // Quick pre-check for obviously promotional emails to save API costs
           if (isObviouslyPromotional(subject, senderEmail)) {
             console.log(`Obviously promotional email detected, skipping: ${subject}`);
+            skippedPromotional++;
+            continue;
+          }
+
+          // Additional business context filtering
+          if (!hasBusinessRelevance(subject, senderEmail)) {
+            console.log(`No business relevance detected, skipping: ${subject}`);
             skippedPromotional++;
             continue;
           }
@@ -257,26 +265,23 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Insert new leads into Supabase with better error handling
+    // Insert new leads into Supabase
     let insertedLeads: any[] = [];
     if (leads.length > 0) {
       console.log(`Inserting ${leads.length} new leads...`);
       
       const { data: insertData, error: insertError } = await supabase
         .from('leads')
-        .upsert(leads, { 
-          onConflict: 'user_id,gmail_message_id',
-          ignoreDuplicates: false // Changed to false to get better error reporting
-        })
+        .insert(leads)
         .select();
 
       if (insertError) {
         console.error('Error inserting leads:', insertError);
         throw new Error(`Failed to save leads: ${insertError.message}`);
+      } else {
+        insertedLeads = insertData || [];
+        console.log('✓ Successfully inserted AI-classified leads:', insertedLeads.length);
       }
-
-      insertedLeads = insertData || [];
-      console.log('✓ Successfully inserted AI-classified leads:', insertedLeads.length);
     }
 
     const result = { 
@@ -335,32 +340,80 @@ function isObviouslyPromotional(subject: string, senderEmail: string): boolean {
   const lowerSubject = subject.toLowerCase();
   const lowerEmail = senderEmail.toLowerCase();
   
-  // Check for obvious promotional patterns in subject
-  const promotionalSubjectPatterns = [
-    'sale', 'discount', '% off', 'free shipping', 'limited time',
-    'giveaway', 'contest', 'winner', 'anniversary', 'years of',
-    'newsletter', 'update from', 'new features', 'product announcement',
-    'black friday', 'cyber monday', 'flash sale', 'exclusive offer'
+  // FOCUSED PROMOTIONAL EMAIL DETECTION - Only block obvious spam
+  
+  // 1. DEFINITE SPAM SENDER PATTERNS (Only the most obvious ones)
+  const spamSenderPatterns = [
+    // No-reply addresses (automated)
+    'noreply@', 'no-reply@', 'donotreply@', 'do-not-reply@',
+    
+    // Marketing/promotional addresses (clear spam)
+    'newsletter@', 'marketing@', 'promo@', 'promotions@', 'deals@',
+    'offers@', 'updates@', 'notifications@',
+    
+    // Email service providers (automated)
+    '.mailchimp.', '.constantcontact.', '.sendgrid.', '.mailgun.',
+    'amazonses.com',
+    
+    // Specific spam domains from your examples
+    'aliexpress.com', 'ebay.', 'amazon.', 'calendly.com',
+    'welcometothejungle.com', 'the5ers.com', 'praktika.ai'
   ];
   
-  // Check for promotional sender patterns
-  const promotionalSenderPatterns = [
-    'noreply@', 'no-reply@', 'newsletter@', 'marketing@', 'promo@',
-    'updates@', 'notifications@', 'hello@', 'team@', 'support@',
-    '.shopify.com', '.mailchimp.', '.constantcontact.', '.sendgrid.',
-    'amazonses.com', 'mailgun.org'
+  // 2. DEFINITE SPAM SUBJECT PATTERNS (Only obvious promotional/spam)
+  const spamSubjectPatterns = [
+    // Specific patterns from your spam examples
+    /deleted \d{4}-\d{2}-\d{2}/i, // "Deleted 2025-07-06"
+    /upgrade your ride/i,
+    /transform your ride/i,
+    /your ride awaits/i,
+    /special tariffs/i,
+    /new match:/i,
+    /we fixed the bugs/i,
+    /live scalping/i,
+    /save big on/i,
+    /emerging brands/i,
+    /coveted collectibles/i,
+    
+    // Clear promotional language
+    /newsletter/i,
+    /unsubscribe/i,
+    /% off/i,
+    /free shipping/i,
+    /black friday/i,
+    /cyber monday/i,
+    /flash sale/i,
+    /limited time offer/i,
+    /act now/i,
+    /buy now/i,
+    /shop now/i,
+    
+    // Job postings (not business inquiries)
+    /job opportunity/i,
+    /career opportunity/i,
+    /we're hiring/i,
+    /job opening/i,
+    /developer position/i,
+    /software engineer.*position/i,
+    
+    // Investment/trading spam
+    /forex trading/i,
+    /crypto trading/i,
+    /make money online/i,
+    /passive income/i,
+    /investment opportunity/i
   ];
   
-  // Check subject
-  for (const pattern of promotionalSubjectPatterns) {
-    if (lowerSubject.includes(pattern)) {
+  // Check sender patterns
+  for (const pattern of spamSenderPatterns) {
+    if (lowerEmail.includes(pattern)) {
       return true;
     }
   }
   
-  // Check sender
-  for (const pattern of promotionalSenderPatterns) {
-    if (lowerEmail.includes(pattern)) {
+  // Check subject patterns
+  for (const pattern of spamSubjectPatterns) {
+    if (pattern.test(lowerSubject)) {
       return true;
     }
   }
@@ -377,6 +430,63 @@ function isReplyToSubject(sentSubject: string, originalSubject: string): boolean
   return cleanSentSubject.includes(cleanOriginalSubject) || 
          cleanOriginalSubject.includes(cleanSentSubject) ||
          sentSubject.toLowerCase().includes('re:');
+}
+
+// Additional business relevance check - MUCH MORE PERMISSIVE
+function hasBusinessRelevance(subject: string, senderEmail: string): boolean {
+  const lowerSubject = subject.toLowerCase();
+  const lowerEmail = senderEmail.toLowerCase();
+  
+  // Only block DEFINITIVE spam patterns - be very conservative
+  const definiteSpamPatterns = [
+    // Only the most obvious spam from your examples
+    /deleted\s+\d{4}-\d{2}-\d{2}/i,
+    /upgrade\s+your\s+ride/i,
+    /transform\s+your\s+ride/i,
+    /special\s+tariffs/i,
+    /new\s+match:/i,
+    /we\s+fixed\s+the\s+bugs/i,
+    /live\s+scalping/i,
+    /save\s+big\s+on/i,
+    /emerging\s+brands/i,
+    /coveted\s+collectibles/i,
+    
+    // Clear promotional newsletters
+    /newsletter/i,
+    /unsubscribe/i,
+    
+    // Obvious job spam
+    /job\s+(opportunity|opening|alert)/i,
+    /career\s+opportunity/i,
+    /we're\s+hiring/i,
+    /developer\s+position/i,
+    
+    // Obvious trading/investment spam
+    /forex\s+trading/i,
+    /crypto\s+trading/i,
+    /make\s+money\s+online/i,
+    /passive\s+income/i,
+    /investment\s+opportunity/i,
+    
+    // Obvious shopping spam
+    /flash\s+sale/i,
+    /black\s+friday/i,
+    /cyber\s+monday/i,
+    /free\s+shipping/i,
+    /buy\s+now/i,
+    /shop\s+now/i
+  ];
+  
+  // Only block if it matches definitive spam patterns
+  for (const pattern of definiteSpamPatterns) {
+    if (pattern.test(lowerSubject)) {
+      return false;
+    }
+  }
+  
+  // Default to TRUE - let most emails through to AI classification
+  // The AI classifier will do the heavy lifting
+  return true;
 }
 
 serve(handler);

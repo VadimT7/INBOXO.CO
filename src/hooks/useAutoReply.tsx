@@ -20,7 +20,7 @@ export function useAutoReply() {
     tone: 'professional',
     length: 'medium',
     confidenceThreshold: 80,
-    businessHoursOnly: true,
+    businessHoursOnly: false, // Changed to false for 24/7 auto-reply by default
     maxDailyReplies: 50
   });
   const [loading, setLoading] = useState(false);
@@ -104,23 +104,39 @@ export function useAutoReply() {
 
   // Send auto-reply for a lead
   const sendAutoReply = useCallback(async (lead: any) => {
+    console.log('🤖 Auto-reply check started:', {
+      leadId: lead.id,
+      senderEmail: lead.sender_email,
+      subject: lead.subject,
+      status: lead.status,
+      autoReplyEnabled: settings.enabled,
+      userExists: !!user,
+      businessHoursOnly: settings.businessHoursOnly
+    });
+
     if (!settings.enabled || !user) {
-      console.log('Auto-reply disabled or no user:', { enabled: settings.enabled, user: !!user });
+      console.log('❌ Auto-reply disabled or no user:', { enabled: settings.enabled, user: !!user });
       return false;
     }
 
-    // TODO: Re-enable business hours check later with proper timezone handling
-    // For now, allow auto-replies at any time to ensure functionality works
-    // if (settings.businessHoursOnly) {
-    //   const now = new Date();
-    //   const currentHour = now.getHours();
-    //   const isBusinessHours = currentHour >= 9 && currentHour <= 17; // 9 AM to 5 PM
-    //   
-    //   if (!isBusinessHours) {
-    //     console.log('Outside business hours, skipping auto-reply');
-    //     return false;
-    //   }
-    // }
+    // Business hours check (if enabled)
+    if (settings.businessHoursOnly) {
+      const now = new Date();
+      const currentHour = now.getHours();
+      const isBusinessHours = currentHour >= 9 && currentHour <= 17; // 9 AM to 5 PM
+      
+      console.log('⏰ Business hours check:', {
+        currentTime: now.toLocaleTimeString(),
+        currentHour,
+        isBusinessHours,
+        businessHoursOnly: settings.businessHoursOnly
+      });
+      
+      if (!isBusinessHours) {
+        console.log('❌ Outside business hours, skipping auto-reply');
+        return false;
+      }
+    }
 
     try {
       console.log('🤖 Starting auto-reply process for lead:', {

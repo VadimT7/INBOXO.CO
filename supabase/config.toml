@@ -22,6 +22,8 @@ enabled = true
 client_id = "929737682525-i8bguru1154i65a7geerhi0pd9qqv68l.apps.googleusercontent.com"
 secret = "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"
 redirect_uri = "http://localhost:8080/auth/v1/callback"
+# Request offline access to get refresh tokens
+url = "https://accounts.google.com/oauth/authorize?access_type=offline&prompt=consent"
 
 [functions]
 enabled = true

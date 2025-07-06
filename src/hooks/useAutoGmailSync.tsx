@@ -10,9 +10,11 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
   const [autoSyncLoading, setAutoSyncLoading] = useState(false);
   const [lastAutoSync, setLastAutoSync] = useState<Date | null>(null);
   const [isServerSyncEnabled, setIsServerSyncEnabled] = useState(false);
+  const [serverSyncRunning, setServerSyncRunning] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasInitialSyncRef = useRef(false);
   const hasShownAutoSyncNotificationRef = useRef(false);
+  const lastKnownSyncTime = useRef<Date | null>(null);
 
   // Check server-side auto-sync status
   useEffect(() => {
@@ -36,7 +38,9 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
         setIsServerSyncEnabled(autoSyncEnabled);
         
         if (profile.last_auto_sync) {
-          setLastAutoSync(new Date(profile.last_auto_sync));
+          const lastSync = new Date(profile.last_auto_sync);
+          setLastAutoSync(lastSync);
+          lastKnownSyncTime.current = lastSync;
         }
 
         if (autoSyncEnabled) {
@@ -51,7 +55,26 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
         } else if (!hasRefreshToken) {
           console.log('⚠️ Server-side auto-sync disabled - no refresh token');
           toast.warning('⚠️ For continuous auto-sync, please sign out and sign in again to grant offline access.', {
-            duration: 6000,
+            duration: 8000,
+            action: {
+              label: 'Sign Out & Re-authenticate',
+              onClick: async () => {
+                await supabase.auth.signOut();
+                window.location.href = '/login';
+              }
+            }
+          });
+        } else if (profile.auto_sync_enabled && !hasRefreshToken) {
+          console.log('⚠️ Auto-sync enabled but missing refresh token');
+          toast.warning('⚠️ Auto-sync requires re-authentication. Please sign out and sign in again.', {
+            duration: 8000,
+            action: {
+              label: 'Re-authenticate',
+              onClick: async () => {
+                await supabase.auth.signOut();
+                window.location.href = '/login';
+              }
+            }
           });
         }
       }
@@ -82,6 +105,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
       
       const now = new Date();
       setLastAutoSync(now);
+      lastKnownSyncTime.current = now;
       console.log('✅ Client-side sync completed successfully');
       
       // Show success notification
@@ -139,7 +163,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
     }
   }, [user, performClientSync]);
 
-  // Set up periodic check for server sync updates (every 2 minutes)
+  // Set up periodic check for server sync updates (every 30 seconds)
   useEffect(() => {
     if (!user || !isServerSyncEnabled) {
       return;
@@ -152,7 +176,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
       clearInterval(intervalRef.current);
     }
 
-    // Check for server sync updates every 2 minutes
+    // Check for server sync updates every 30 seconds for better responsiveness
     intervalRef.current = setInterval(async () => {
       try {
         const { data: profile } = await supabase
@@ -163,9 +187,24 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
 
         if (profile?.last_auto_sync) {
           const serverLastSync = new Date(profile.last_auto_sync);
-          if (!lastAutoSync || serverLastSync > lastAutoSync) {
+          
+          // Check if a sync is likely running (last sync was less than 30 seconds ago)
+          const timeSinceLastSync = Date.now() - serverLastSync.getTime();
+          const isSyncLikelyRunning = timeSinceLastSync < 30000; // 30 seconds
+          
+          setServerSyncRunning(isSyncLikelyRunning);
+          
+          // If the server sync time is newer than our last known time
+          if (!lastKnownSyncTime.current || serverLastSync > lastKnownSyncTime.current) {
             setLastAutoSync(serverLastSync);
+            lastKnownSyncTime.current = serverLastSync;
             console.log('🔄 Server auto-sync detected, refreshing UI...');
+            
+            // Show a subtle notification about the background sync
+            toast.info('📧 Background sync completed - refreshing leads...', {
+              duration: 2000,
+            });
+            
             if (onSyncComplete) {
               onSyncComplete();
             }
@@ -174,7 +213,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
       } catch (error) {
         console.error('Error checking server sync status:', error);
       }
-    }, 2 * 60 * 1000); // Check every 2 minutes
+    }, 30 * 1000); // Check every 30 seconds
 
     // Cleanup on unmount or user change
     return () => {
@@ -183,7 +222,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
         intervalRef.current = null;
       }
     };
-  }, [user, isServerSyncEnabled, lastAutoSync, onSyncComplete]);
+  }, [user, isServerSyncEnabled, onSyncComplete]);
 
   // Reset initial sync flag when user changes
   useEffect(() => {
@@ -192,6 +231,8 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
       hasShownAutoSyncNotificationRef.current = false;
       setIsServerSyncEnabled(false);
       setLastAutoSync(null);
+      lastKnownSyncTime.current = null;
+      setServerSyncRunning(false);
     }
   }, [user]);
 
@@ -206,7 +247,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
   }, []);
 
   return {
-    autoSyncLoading,
+    autoSyncLoading: autoSyncLoading || serverSyncRunning,
     lastAutoSync,
     isAutoSyncEnabled: !!user && isServerSyncEnabled,
     isServerSyncEnabled,
