@@ -26,8 +26,8 @@ const handler = async (req: Request): Promise<Response> => {
     const syncPeriod = body.period || 7; // Default to 7 days if not specified
     console.log(`Sync period: ${syncPeriod} days`);
     
-    // Validate user
-    const user = await validateUser(req.headers.get('Authorization'));
+    // Validate user (pass body for service role detection)
+    const user = await validateUser(req.headers.get('Authorization'), body);
     
     // Get Google access token from header (passed directly from frontend)
     const googleToken = req.headers.get('X-Google-Token');

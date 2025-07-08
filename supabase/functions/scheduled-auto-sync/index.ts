@@ -8,7 +8,6 @@ const corsHeaders = {
 
 interface UserProfile {
   id: string;
-  email?: string;
   google_refresh_token?: string;
   last_auto_sync?: string;
   auto_sync_enabled?: boolean;
@@ -55,7 +54,7 @@ serve(async (req) => {
     // Get all users who need auto-sync
     const { data: profiles, error: profilesError } = await supabaseAdmin
       .from('profiles')
-      .select('id, email, google_refresh_token, last_auto_sync, auto_sync_enabled')
+      .select('id, google_refresh_token, last_auto_sync, auto_sync_enabled')
       .eq('auto_sync_enabled', true)
       .not('google_refresh_token', 'is', null)
 
@@ -85,7 +84,7 @@ serve(async (req) => {
     
     const usersToSync = profiles.filter(profile => {
       if (!profile.last_auto_sync) {
-        console.log(`🆕 User ${profile.email || profile.id} never synced - adding to sync queue`);
+        console.log(`🆕 User ${profile.id} never synced - adding to sync queue`);
         return true; // Never synced, should sync
       }
       const lastSync = new Date(profile.last_auto_sync);
@@ -93,9 +92,9 @@ serve(async (req) => {
       
       if (shouldSync) {
         const minutesSinceLastSync = Math.floor((now.getTime() - lastSync.getTime()) / 1000 / 60);
-        console.log(`🔄 User ${profile.email || profile.id} last synced ${minutesSinceLastSync}m ago - adding to sync queue`);
+        console.log(`🔄 User ${profile.id} last synced ${minutesSinceLastSync}m ago - adding to sync queue`);
       } else {
-        console.log(`⏸️ User ${profile.email || profile.id} recently synced - skipping`);
+        console.log(`⏸️ User ${profile.id} recently synced - skipping`);
       }
       
       return shouldSync;
@@ -139,7 +138,7 @@ serve(async (req) => {
             ...result.value
           });
         } else {
-          console.error(`❌ Sync failed for user ${profile.email || profile.id}:`, result.reason);
+          console.error(`❌ Sync failed for user ${profile.id}:`, result.reason);
           syncResults.push({
             success: false,
             error: result.reason?.message || 'Unknown error',
@@ -208,7 +207,7 @@ serve(async (req) => {
 })
 
 async function syncUserGmail(supabaseAdmin: any, profile: UserProfile): Promise<Partial<SyncResult>> {
-  const userIdentifier = profile.email || profile.id;
+  const userIdentifier = profile.id;
   console.log(`🔄 Starting sync for user: ${userIdentifier}`);
   
   try {
