@@ -1374,7 +1374,7 @@ const LeadsPage = () => {
               )} */}
               
               {/* Split Sync Gmail Button */}
-              <div className="flex flex-col items-end space-y-2">
+              <div className="relative">
                 <div className="flex rounded-xl overflow-hidden">
                   <Button
                     disabled={isAnySyncLoading}
@@ -1430,14 +1430,14 @@ const LeadsPage = () => {
                   </DropdownMenu>
                 </div>
                 
-                {/* Last Sync Indicator */}
+                {/* Last Sync Indicator - positioned absolutely to not affect layout */}
                 <AnimatePresence>
                   {lastAutoSync && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="flex items-center space-x-1.5 text-xs text-slate-500"
+                      className="absolute top-full right-0 mt-1 flex items-center space-x-1.5 text-xs text-slate-500 whitespace-nowrap"
                     >
                       <Clock className="h-3 w-3" />
                       <span>
