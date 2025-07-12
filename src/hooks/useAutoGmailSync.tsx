@@ -117,6 +117,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
       // If we have new leads and a callback, call it
       if (syncResult?.new_leads_data && syncResult.new_leads_data.length > 0) {
         console.log(`📧 Found ${syncResult.new_leads_data.length} new leads`);
+        console.log('🔍 New leads data structure:', syncResult.new_leads_data);
         
         // Show notification about new leads
         toast.success(`📧 Found ${syncResult.new_leads_data.length} new lead${syncResult.new_leads_data.length === 1 ? '' : 's'}!`, {
@@ -124,6 +125,7 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
         });
         
         if (onNewLeads) {
+          console.log('🤖 Calling onNewLeads callback for auto-reply processing...');
           onNewLeads(syncResult.new_leads_data);
         }
       }
@@ -205,6 +207,9 @@ export function useAutoGmailSync(onNewLeads?: (newLeads: any[]) => void, onSyncC
               duration: 2000,
             });
             
+            // Note: Server-side auto-sync already processes auto-replies directly in the server function
+            // We don't need to call onNewLeads here because the server has already handled auto-replies
+            // We just need to refresh the UI to show the updated leads
             if (onSyncComplete) {
               onSyncComplete();
             }

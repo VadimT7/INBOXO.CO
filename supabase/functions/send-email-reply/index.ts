@@ -57,12 +57,43 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Verify user
+    // Get request body first to check for user_id
+    const requestBody = await req.json();
+    const { leadId, recipientEmail, subject, body, user_id } = requestBody;
+
+    // Verify user - handle both regular auth and service role contexts
+    let user: any;
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
-    if (userError || !user) {
-      throw new Error('Unauthorized');
+    // Check if this is a service role call with user_id in body
+    if (token === supabaseServiceKey && user_id) {
+      console.log('Service role context detected, using provided user_id:', user_id);
+      // When called with service role, get user data from profiles table
+      const { data: profileData, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('id', user_id)
+        .single();
+        
+      if (profileFetchError || !profileData) {
+        console.error('Profile fetch error:', profileFetchError);
+        throw new Error('Invalid user_id provided');
+      }
+      
+      // Create a user object compatible with auth user format
+      user = {
+        id: profileData.id,
+        email: null // We'll get this from Gmail API later
+      };
+    } else {
+      // Regular user auth flow
+      const { data: { user: authUser }, error: userError } = await supabase.auth.getUser(token);
+      
+      if (userError || !authUser) {
+        throw new Error('Unauthorized');
+      }
+      
+      user = authUser;
     }
 
     // Get Google access token from header
@@ -70,9 +101,6 @@ const handler = async (req: Request): Promise<Response> => {
     if (!googleToken) {
       throw new Error('No Google access token provided. Please sign out and sign in again with Google to enable email sending.');
     }
-
-    // Get request body
-    const { leadId, recipientEmail, subject, body } = await req.json();
 
     if (!recipientEmail || !subject || !body) {
       throw new Error('Missing required fields: recipientEmail, subject, or body');

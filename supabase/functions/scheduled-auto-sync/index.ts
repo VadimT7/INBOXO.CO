@@ -252,8 +252,22 @@ async function syncUserGmail(supabaseAdmin: any, profile: UserProfile): Promise<
     const syncData = await syncResponse.json();
     console.log(`📧 Sync result for ${userIdentifier}:`, {
       newLeads: syncData.new_leads || 0,
-      totalEmails: syncData.total_new_emails || 0
+      totalEmails: syncData.total_new_emails || 0,
+      hasNewLeadsData: !!syncData.new_leads_data,
+      newLeadsDataLength: syncData.new_leads_data?.length || 0
     });
+
+    // Log the actual new leads data for debugging
+    if (syncData.new_leads_data && syncData.new_leads_data.length > 0) {
+      console.log(`📋 New leads data received:`, syncData.new_leads_data.map((lead: any) => ({
+        id: lead.id,
+        email: lead.sender_email,
+        status: lead.status,
+        subject: lead.subject
+      })));
+    } else {
+      console.log(`⚠️ No new_leads_data array received from sync, even though new_leads count is ${syncData.new_leads}`);
+    }
 
     // Update last auto-sync timestamp
     const { error: updateError } = await supabaseAdmin
@@ -266,11 +280,14 @@ async function syncUserGmail(supabaseAdmin: any, profile: UserProfile): Promise<
       // Don't fail the entire sync for this
     }
 
-    // If new leads found, process auto-replies
-    if (syncData.new_leads_data && syncData.new_leads_data.length > 0) {
-      console.log(`🤖 Processing auto-replies for user ${userIdentifier}: ${syncData.new_leads_data.length} new leads`);
-      await processAutoReplies(supabaseAdmin, profile.id, syncData.new_leads_data);
-    }
+    // Process auto-replies for both new leads and existing eligible leads
+    await processAutoReplies(supabaseAdmin, profile.id, syncData.new_leads_data || [], accessToken);
+    
+    // Small delay to ensure database consistency
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Also check for existing leads that need auto-reply processing
+    await processExistingLeadsForAutoReply(supabaseAdmin, profile.id, accessToken);
 
     console.log(`✅ Sync completed successfully for user: ${userIdentifier}`);
     return { 
@@ -328,9 +345,20 @@ async function refreshGoogleToken(refreshToken: string): Promise<string | null> 
   }
 }
 
-async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: any[]) {
+async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: any[], accessToken: string) {
   try {
     console.log(`🤖 Processing auto-replies for user ${userId}: ${newLeads.length} new leads`);
+    
+    // Debug log the actual leads received
+    if (newLeads.length > 0) {
+      console.log(`📝 Leads received for auto-reply processing:`, newLeads.map(l => ({
+        id: l.id,
+        email: l.sender_email,
+        status: l.status,
+        answered: l.answered,
+        auto_replied: l.auto_replied
+      })));
+    }
 
     // Get user's auto-reply settings
     const { data: settings, error: settingsError } = await supabaseAdmin
@@ -350,7 +378,11 @@ async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: 
     }
 
     const autoReplySettings = settings.settings.autoReply;
-    console.log(`✅ Auto-reply is enabled for user ${userId}`);
+    console.log(`✅ Auto-reply is enabled for user ${userId}`, {
+      tone: autoReplySettings.tone,
+      length: autoReplySettings.length,
+      businessHoursOnly: autoReplySettings.businessHoursOnly
+    });
 
     // Filter for hot/warm leads that haven't been answered
     const leadsToReply = newLeads.filter(lead => 
@@ -359,12 +391,29 @@ async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: 
       !lead.auto_replied
     );
 
+    console.log(`📊 Lead analysis for user ${userId}:`, {
+      totalNewLeads: newLeads.length,
+      hotLeads: newLeads.filter(l => l.status === 'hot').length,
+      warmLeads: newLeads.filter(l => l.status === 'warm').length,
+      coldLeads: newLeads.filter(l => l.status === 'cold').length,
+      alreadyAnswered: newLeads.filter(l => l.answered).length,
+      alreadyAutoReplied: newLeads.filter(l => l.auto_replied).length,
+      eligibleForAutoReply: leadsToReply.length
+    });
+
     if (leadsToReply.length === 0) {
       console.log(`📭 No hot/warm leads to auto-reply for user ${userId}`);
       return;
     }
 
-    console.log(`🔥 Processing ${leadsToReply.length} hot/warm leads for auto-reply`);
+    console.log(`🔥 Processing ${leadsToReply.length} hot/warm leads for auto-reply:`, 
+      leadsToReply.map(l => ({
+        id: l.id,
+        email: l.sender_email,
+        status: l.status,
+        subject: l.subject
+      }))
+    );
 
     // Process auto-replies with controlled concurrency
     let successCount = 0;
@@ -374,21 +423,52 @@ async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: 
       try {
         console.log(`🤖 Sending auto-reply to ${lead.sender_email} for user ${userId}`);
 
-        // Call the send-email-reply function
-        const replyResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email-reply`, {
+        // First, generate an AI response for this lead
+        const aiResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-ai-response`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            leadId: lead.id,
-            message: '', // Will be generated by AI
-            isAutoReply: true,
+            emailContent: lead.full_content || lead.snippet || '',
+            emailSubject: lead.subject || '',
+            senderEmail: lead.sender_email || '',
             tone: autoReplySettings.tone || 'professional',
             length: autoReplySettings.length || 'medium',
             writingStyle: autoReplySettings.writingStyle || 'business',
-            user_id: userId // Admin context
+            user_id: userId // Add user context for service role
+          })
+        });
+
+        if (!aiResponse.ok) {
+          const errorText = await aiResponse.text();
+          console.error(`❌ AI response generation failed for ${lead.sender_email} (${aiResponse.status}):`, errorText);
+          continue; // Skip this lead and continue with others
+        }
+
+        const aiData = await aiResponse.json();
+        const generatedMessage = aiData.response;
+
+        if (!generatedMessage) {
+          console.error(`❌ No AI response generated for ${lead.sender_email}`);
+          continue;
+        }
+
+        // Now send the email reply
+        const replyResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/send-email-reply`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'X-Google-Token': accessToken, // Use the access token we already refreshed
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            leadId: lead.id,
+            recipientEmail: lead.sender_email,
+            subject: `Re: ${lead.subject}`,
+            body: generatedMessage,
+            user_id: userId // Add user context for service role
           })
         });
 
@@ -414,4 +494,56 @@ async function processAutoReplies(supabaseAdmin: any, userId: string, newLeads: 
   } catch (error) {
     console.error(`❌ Error processing auto-replies for user ${userId}:`, error);
   }
-} 
+}
+
+async function processExistingLeadsForAutoReply(supabaseAdmin: any, userId: string, accessToken: string) {
+  try {
+    console.log(`🔍 Checking for existing leads that need auto-reply for user ${userId}`);
+
+    // Get user's auto-reply settings first
+    const { data: settings, error: settingsError } = await supabaseAdmin
+      .from('user_settings')
+      .select('settings')
+      .eq('user_id', userId)
+      .single();
+
+    if (settingsError) {
+      console.log(`⚠️ Could not fetch auto-reply settings for user ${userId}:`, settingsError.message);
+      return;
+    }
+
+    if (!settings?.settings?.autoReply?.enabled) {
+      console.log(`🔕 Auto-reply disabled for user ${userId}, skipping existing leads check`);
+      return;
+    }
+
+    // Get existing leads that need auto-reply processing
+    const { data: existingLeads, error: leadsError } = await supabaseAdmin
+      .from('leads')
+      .select('id, sender_email, subject, status, full_content, snippet, answered, auto_replied, gmail_message_id')
+      .eq('user_id', userId)
+      .eq('answered', false)
+      .eq('auto_replied', false)
+      .in('status', ['hot', 'warm'])
+      .order('received_at', { ascending: false })
+      .limit(10); // Limit to prevent processing too many at once
+
+    if (leadsError) {
+      console.error(`❌ Error fetching existing leads for user ${userId}:`, leadsError);
+      return;
+    }
+
+    if (!existingLeads || existingLeads.length === 0) {
+      console.log(`📭 No existing leads need auto-reply for user ${userId}`);
+      return;
+    }
+
+    console.log(`🔥 Found ${existingLeads.length} existing leads that need auto-reply processing for user ${userId}`);
+
+    // Process the existing leads using the same logic as new leads
+    await processAutoReplies(supabaseAdmin, userId, existingLeads, accessToken);
+
+  } catch (error) {
+    console.error(`❌ Error processing existing leads for auto-reply for user ${userId}:`, error);
+  }
+}

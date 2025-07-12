@@ -534,7 +534,8 @@ const LeadsPage = () => {
     console.log('🤖 Auto-reply processing started:', {
       totalNewLeads: newLeads.length,
       autoReplyEnabled: autoReplySettings.enabled,
-      settings: autoReplySettings
+      settings: autoReplySettings,
+      newLeadsData: newLeads
     });
     
     // Check if auto-reply is enabled

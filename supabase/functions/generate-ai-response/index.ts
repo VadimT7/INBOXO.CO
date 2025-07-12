@@ -19,21 +19,13 @@ serve(async (req) => {
       throw new Error('No authorization header')
     }
 
-    // Create Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    )
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabase = createClient(supabaseUrl!, supabaseServiceKey!);
 
-    // Verify user
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token)
-    
-    if (userError || !user) {
-      throw new Error('Unauthorized')
-    }
-
-    // Get request payload
+    // Get request body first to check for user_id
+    const requestBody = await req.json();
     const { 
       emailContent, 
       emailSubject, 
@@ -41,8 +33,50 @@ serve(async (req) => {
       tone, 
       length,
       writingStyle,
-      similarResponses 
-    } = await req.json()
+      similarResponses,
+      user_id 
+    } = requestBody;
+
+    // Verify user - handle both regular auth and service role contexts
+    let user: any;
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Check if this is a service role call with user_id in body
+    if (token === supabaseServiceKey && user_id) {
+      console.log('Service role context detected, using provided user_id:', user_id);
+      // When called with service role, get user data from profiles table
+      const { data: profileData, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user_id)
+        .single();
+        
+      if (profileFetchError || !profileData) {
+        console.log('Profile fetch error:', profileFetchError);
+        throw new Error('Invalid user_id provided');
+      }
+      
+      // Create a user object compatible with auth user format
+      user = {
+        id: profileData.id,
+        email: null, // We don't need email for AI generation
+        user_metadata: {}
+      };
+    } else {
+      // Regular user auth flow
+      const supabaseClient = createClient(
+        Deno.env.get('SUPABASE_URL') ?? '',
+        Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      );
+      
+      const { data: { user: authUser }, error: userError } = await supabaseClient.auth.getUser(token);
+      
+      if (userError || !authUser) {
+        throw new Error('Unauthorized');
+      }
+      
+      user = authUser;
+    }
 
     // Get OpenAI API key
     const openaiKey = Deno.env.get('OPENAI_API_KEY')
@@ -52,7 +86,7 @@ serve(async (req) => {
     }
 
     // Get user's business context and profile from settings
-    const { data: settingsData } = await supabaseClient
+    const { data: settingsData } = await supabase
       .from('user_settings')
       .select('settings')
       .eq('user_id', user.id)
@@ -216,7 +250,7 @@ Generate a response that makes them WANT to take action NOW, while staying withi
     }
 
     // Track usage
-    await supabaseClient.rpc('increment_user_usage', {
+    await supabase.rpc('increment_user_usage', {
       p_user_id: user.id,
       p_ai_responses_delta: 1
     })
