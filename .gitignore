@@ -1,6 +1,4 @@
 # Environment files
-.env
-.env.local
 .env.*.local
 
 # Dependencies
@@ -38,3 +36,4 @@ yarn-error.log*
 .branches
 .temp
 .vercel
+config.bat
