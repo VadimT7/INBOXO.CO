@@ -54,7 +54,7 @@ const SuccessPage = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
         >
-          Thank you for subscribing to InboxFlows. Your account has been activated and you can start using all features immediately.
+          Thank you for subscribing to Inboxo. Your account has been activated and you can start using all features immediately.
         </motion.p>
 
         <motion.div

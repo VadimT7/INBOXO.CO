@@ -44,7 +44,7 @@ export const ROICalculator = () => {
             </div>
             <div>
               <h3 className="text-2xl font-bold text-white">Guaranteed ROI Calculator</h3>
-              <p className="text-slate-400 text-sm">Your guaranteed return with InboxFlow</p>
+              <p className="text-slate-400 text-sm">Your guaranteed return with Inboxo</p>
             </div>
           </div>
           
@@ -138,7 +138,7 @@ export const ROICalculator = () => {
                 <div>
                   <span className="text-slate-400 text-sm">Current Monthly Revenue</span>
                   <div className="text-xl font-semibold text-slate-300 mt-1">
-                    Without InboxFlow
+                    Without Inboxo
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-red-400">
@@ -155,7 +155,7 @@ export const ROICalculator = () => {
                 <div>
                   <span className="text-slate-400 text-sm">Projected Monthly Revenue</span>
                   <div className="text-xl font-semibold text-emerald-300 mt-1">
-                    With InboxFlow ({improvementFactor}x conversion)
+                    With Inboxo ({improvementFactor}x conversion)
                   </div>
                 </div>
                 <div className="text-2xl font-bold text-emerald-400">

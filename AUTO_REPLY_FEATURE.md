@@ -1,7 +1,7 @@
 # Auto-Reply Feature Documentation
 
 ## Overview
-The auto-reply feature in InboxFlow automatically generates and sends personalized email responses to your leads using AI. When enabled, it helps you respond quickly to hot and warm leads, ensuring no opportunity is missed.
+The auto-reply feature in Inboxo automatically generates and sends personalized email responses to your leads using AI. When enabled, it helps you respond quickly to hot and warm leads, ensuring no opportunity is missed.
 
 ## How It Works
 

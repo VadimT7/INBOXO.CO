@@ -1050,7 +1050,7 @@ const SettingsPage = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="analyticsTracking">Analytics Tracking</Label>
-                      <p className="text-sm text-slate-600">Help improve InboxFlow with usage analytics</p>
+                      <p className="text-sm text-slate-600">Help improve Inboxo with usage analytics</p>
                     </div>
                     <Switch
                       id="analyticsTracking"
@@ -1933,7 +1933,7 @@ const SettingsPage = () => {
                         <DialogTitle className="text-red-600">🚨 Final Confirmation Required</DialogTitle>
                         <DialogDescription className="space-y-4">
                           <p className="font-medium">
-                            You are about to permanently delete your InboxFlow account.
+                            You are about to permanently delete your Inboxo account.
                           </p>
                           <p className="text-sm text-slate-600">
                             To confirm this action, please type the following phrase exactly:

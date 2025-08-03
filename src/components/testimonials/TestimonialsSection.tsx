@@ -7,7 +7,7 @@ const testimonials = [
     role: "Sales Director",
     company: "TechCorp Inc.",
     image: "https://randomuser.me/api/portraits/women/1.jpg",
-    content: "InboxFlows has transformed how we handle leads. Our response time has decreased by 70% and our conversion rate has doubled.",
+    content: "Inboxo has transformed how we handle leads. Our response time has decreased by 70% and our conversion rate has doubled.",
     rating: 5
   },
   {
@@ -90,7 +90,7 @@ const TestimonialsSection = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            See what our customers have to say about their experience with InboxFlows
+            See what our customers have to say about their experience with Inboxo
           </motion.p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -1,4 +1,4 @@
-# InboxFlow Deployment Checklist
+# Inboxo Deployment Checklist
 
 ## 🚨 Critical Issues (Must Fix Before Release)
 

@@ -10,7 +10,7 @@ const TextToSVG = require('text-to-svg');
 
 const textToSVG = TextToSVG.loadSync(fontPath);
 
-const svg = textToSVG.getSVG('InboxFlows', {
+const svg = textToSVG.getSVG('Inboxo', {
   x: 0,
   y: 0,
   fontSize: 72,

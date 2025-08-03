@@ -64,7 +64,7 @@ const Header = () => {
                   )}>
                     <span className="text-white font-bold text-xl">IF</span>
                   </div>
-                  <span>InboxFlow</span>
+                  <span>Inboxo</span>
                 </Link>
 
                 {/* Center - Navigation */}

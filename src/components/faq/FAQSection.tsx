@@ -62,7 +62,7 @@ const FAQSection = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.2 }}
           >
-            Everything you need to know about InboxFlows
+            Everything you need to know about Inboxo
           </motion.p>
         </div>
 

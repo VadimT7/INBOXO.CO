@@ -15,14 +15,14 @@ const Footer = () => {
               <div className="w-8 h-8 rounded bg-blue-500 flex items-center justify-center">
                 <span className="text-white font-bold text-xl">IF</span>
               </div>
-              <span className="text-xl font-bold">InboxFlow</span>
+              <span className="text-xl font-bold">Inboxo</span>
             </div>
             <p className="text-slate-400 mb-4">
               Transform your inbox into a lead-generating powerhouse with AI-powered email management.
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://twitter.com/inboxflow"
+                href="https://twitter.com/inboxo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
@@ -30,7 +30,7 @@ const Footer = () => {
                 <Twitter size={20} />
               </a>
               <a
-                href="https://github.com/inboxflow"
+                href="https://github.com/inboxo"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-slate-400 hover:text-white transition-colors"
@@ -38,7 +38,7 @@ const Footer = () => {
                 <Github size={20} />
               </a>
               <a
-                href="mailto:hello@inboxflow.com"
+                href="mailto:hello@inboxo.com"
                 className="text-slate-400 hover:text-white transition-colors"
               >
                 <Mail size={20} />
@@ -116,7 +116,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-slate-800">
           <p className="text-center text-slate-400 text-sm">
-            © {currentYear} InboxFlow. All rights reserved.
+            © {currentYear} Inboxo. All rights reserved.
           </p>
         </div>
       </div>

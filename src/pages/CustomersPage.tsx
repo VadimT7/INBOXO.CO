@@ -25,7 +25,7 @@ const customers = [
     name: 'TechVision Solutions',
     industry: 'Enterprise Software',
     logo: '/customers/techvision-logo.webp',
-    quote: "InboxFlow revolutionized our sales process. The AI-powered lead scoring helped us identify high-value opportunities 4x faster, and our team's productivity skyrocketed.",
+    quote: "Inboxo revolutionized our sales process. The AI-powered lead scoring helped us identify high-value opportunities 4x faster, and our team's productivity skyrocketed.",
     stats: {
       responseTime: '85%',
       conversionRate: '4x',
@@ -40,7 +40,7 @@ const customers = [
     color: 'from-amber-500 to-yellow-500',
     case_study: {
       challenge: 'Managing a rapidly growing sales pipeline with over 10,000 monthly leads while maintaining personalized engagement and quick response times.',
-      solution: "Implemented InboxFlow's enterprise solution with custom AI models and automated workflow triggers",
+      solution: "Implemented Inboxo's enterprise solution with custom AI models and automated workflow triggers",
       results: [
         'Reduced lead qualification time from 3 days to 4 hours',
         'Increased sales team productivity by 156%',
@@ -69,7 +69,7 @@ const customers = [
     color: 'from-blue-500 to-indigo-500',
     case_study: {
       challenge: 'Scaling client communication and lead nurturing while maintaining high-touch service quality for a fast-growing agency.',
-      solution: "Deployed InboxFlow's agency suite with custom templates and multi-channel automation",
+      solution: "Deployed Inboxo's agency suite with custom templates and multi-channel automation",
       results: [
         'Scaled from 50 to 200 active clients in 6 months',
         'Maintained 98% client satisfaction score',
@@ -83,7 +83,7 @@ const customers = [
     name: 'GlobalTech Industries',
     industry: 'Manufacturing',
     logo: '/customers/globaltech-logo.webp',
-    quote: "InboxFlow helped us modernize our entire sales approach. The integration with our existing CRM was seamless, and the ROI has been exceptional - we've seen a 205% increase in qualified leads.",
+    quote: "Inboxo helped us modernize our entire sales approach. The integration with our existing CRM was seamless, and the ROI has been exceptional - we've seen a 205% increase in qualified leads.",
     stats: {
       responseTime: '78%',
       conversionRate: '2.8x',
@@ -98,7 +98,7 @@ const customers = [
     color: 'from-emerald-500 to-teal-500',
     case_study: {
       challenge: 'Unifying global sales teams across 12 countries and modernizing a legacy lead management system.',
-      solution: "Implemented InboxFlow's enterprise platform with custom localization and advanced analytics",
+      solution: "Implemented Inboxo's enterprise platform with custom localization and advanced analytics",
       results: [
         'Unified 250+ sales reps on a single platform',
         'Increased cross-border deal collaboration by 150%',
@@ -305,7 +305,7 @@ const CustomersPage = () => {
             </h1>
             <p className="text-xl text-slate-300 max-w-3xl mx-auto mt-8 mb-12">
               See how leading companies are transforming their lead management and
-              achieving remarkable results with InboxFlow.
+              achieving remarkable results with Inboxo.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center mt-4">
               <Button
@@ -384,7 +384,7 @@ const CustomersPage = () => {
             </h2>
             <p className="text-lg text-slate-300 mb-8 max-w-2xl mx-auto">
               Start your journey to better lead management today and see why
-              companies trust InboxFlow to transform their sales process.
+              companies trust Inboxo to transform their sales process.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button

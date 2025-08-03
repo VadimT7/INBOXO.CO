@@ -111,7 +111,7 @@ export function AutoReplyToggle() {
               Auto-Reply Settings
             </DialogTitle>
             <DialogDescription>
-              Configure how InboxFlow automatically responds to your leads
+              Configure how Inboxo automatically responds to your leads
             </DialogDescription>
           </DialogHeader>
           

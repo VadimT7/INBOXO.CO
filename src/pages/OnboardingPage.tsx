@@ -79,48 +79,34 @@ const OnboardingPage = () => {
 
   const triggerGmailSync = async () => {
     try {
-      console.log('🚀 Starting automatic Gmail sync...');
+      console.log('🚀 Starting automatic Gmail sync simulation...');
       
-      // Simulate real-time lead discovery
+      // Simulate real-time lead discovery with faster animation
       const countInterval = setInterval(() => {
         setLeadCount(prev => {
           const newCount = prev + Math.floor(Math.random() * 3) + 1;
           return Math.min(newCount, 25); // Cap at 25 for demo
         });
-      }, 300);
+      }, 200);
 
-      // Actually sync Gmail
-      await syncGmailLeads();
+      // Simulate loading for just 3 seconds instead of real sync
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Fetch the actual leads
-      const { data: fetchedLeads, error } = await supabase
-        .from('leads')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('received_at', { ascending: false })
-        .limit(20);
-
       clearInterval(countInterval);
 
-      if (error) {
-        console.error('Error fetching leads:', error);
-        // Use demo data if real sync fails
-        setLeads(createDemoLeads());
-        setLeadCount(5);
-      } else {
-        setLeads(fetchedLeads || []);
-        setLeadCount(fetchedLeads?.length || 0);
-      }
+      // Always use demo data for fast onboarding experience
+      setLeads(createDemoLeads());
+      setLeadCount(25);
 
-      // Wait a moment to show the final count
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Brief pause to show final count
+      await new Promise(resolve => setTimeout(resolve, 800));
       
     } catch (error) {
-      console.error('Gmail sync error:', error);
+      console.error('Gmail sync simulation error:', error);
       // Fallback to demo leads
       setLeads(createDemoLeads());
-      setLeadCount(5);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      setLeadCount(25);
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
   };
 
@@ -222,8 +208,8 @@ Our AI-powered system can help you:
 I'd love to show you how this could transform your sales process. Are you available for a quick 15-minute demo this week? I can show you exactly how we'd handle your current lead volume.
 
 Best regards,
-Vadim Tuchila
-Founder, InboxFlow`;
+ Vadim Tuchila
+ Founder, Inboxo`;
   };
 
   const triggerCelebration = () => {
@@ -372,10 +358,10 @@ Founder, InboxFlow`;
                 transition={{ delay: 0.2 }}
                 className="text-5xl font-bold mb-6"
               >
-                Welcome to{' '}
-                <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  InboxFlow
-                </span>
+                                 Welcome to{' '}
+                 <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                   Inboxo
+                 </span>
               </motion.h1>
               
               <motion.div
@@ -395,32 +381,230 @@ Founder, InboxFlow`;
                 </p>
               </motion.div>
               
+              {/* Premium Animation Flow */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="flex justify-center items-center space-x-8"
+                transition={{ delay: 0.6, duration: 0.8 }}
+                className="relative"
               >
-                {[
-                  { label: "Scan Gmail", delay: 0.7 },
-                  { label: "Find Hot Leads", delay: 0.8 },
-                  { label: "Generate Response", delay: 0.9 }
-                ].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: item.delay, type: "spring" }}
-                    className="flex items-center text-slate-600"
-                  >
+                {/* Floating Background Elements */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  {[...Array(6)].map((_, i) => (
                     <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
-                      className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full mr-3 shadow-lg"
-                    ></motion.div>
-                    <span className="font-medium">{item.label}</span>
+                      key={i}
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ 
+                        opacity: [0, 0.3, 0],
+                        scale: [0, 1, 0],
+                        x: [0, Math.random() * 400 - 200],
+                        y: [0, Math.random() * 200 - 100]
+                      }}
+                      transition={{ 
+                        duration: 4,
+                        repeat: Infinity,
+                        delay: i * 0.7,
+                        ease: "easeInOut"
+                      }}
+                      className="absolute w-2 h-2 bg-gradient-to-r from-blue-400/30 to-purple-400/30 rounded-full blur-sm"
+                      style={{
+                        left: `${20 + (i * 12)}%`,
+                        top: `${30 + (i * 8)}%`
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Main Content Flow */}
+                <div className="relative z-10 flex flex-row items-center justify-center space-x-8">
+                  {[
+                    { 
+                      label: "Scan Gmail", 
+                      icon: "📧", 
+                      delay: 0.7,
+                      color: "from-blue-500 to-cyan-500",
+                      description: "Analyzing your emails"
+                    },
+                    { 
+                      label: "Find Hot Leads", 
+                      icon: "🎯", 
+                      delay: 1.2,
+                      color: "from-emerald-500 to-teal-500",
+                      description: "Identifying prospects"
+                    },
+                    { 
+                      label: "Generate Response", 
+                      icon: "✨", 
+                      delay: 1.7,
+                      color: "from-purple-500 to-pink-500",
+                      description: "Crafting AI responses"
+                    }
+                  ].map((item, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 50, scale: 0.8 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      transition={{ 
+                        delay: item.delay, 
+                        type: "spring",
+                        stiffness: 100,
+                        damping: 10
+                      }}
+                      className="relative group"
+                    >
+                      {/* Connection Line to Next Step */}
+                      {index < 2 && (
+                        <motion.div
+                          initial={{ scaleX: 0 }}
+                          animate={{ scaleX: 1 }}
+                          transition={{ delay: item.delay + 0.8, duration: 0.8 }}
+                          className="absolute left-full top-1/2 -translate-y-1/2 w-8 h-0.5 bg-gradient-to-r from-slate-300 to-transparent"
+                        />
+                      )}
+                      
+                      {/* Pulsing Background */}
+                      <motion.div
+                        animate={{ 
+                          scale: [1, 1.05, 1],
+                          boxShadow: [
+                            "0 0 0 0 rgba(59, 130, 246, 0)",
+                            "0 0 0 10px rgba(59, 130, 246, 0.1)",
+                            "0 0 0 0 rgba(59, 130, 246, 0)"
+                          ]
+                        }}
+                        transition={{ 
+                          duration: 3, 
+                          repeat: Infinity,
+                          delay: item.delay + 1
+                        }}
+                        className="absolute inset-0 rounded-2xl"
+                      />
+                      
+                      {/* Main Card */}
+                      <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 min-w-[280px]">
+                        {/* Shimmer Effect */}
+                        <motion.div
+                          animate={{
+                            x: ["-100%", "100%"]
+                          }}
+                          transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            delay: item.delay + 2,
+                            ease: "easeInOut"
+                          }}
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ clipPath: "inset(0)" }}
+                        />
+                        
+                        <div className="flex items-center space-x-4">
+                          {/* Animated Icon Container */}
+                          <motion.div
+                            animate={{ 
+                              rotate: [0, 5, -5, 0],
+                              scale: [1, 1.1, 1]
+                            }}
+                            transition={{ 
+                              duration: 2, 
+                              repeat: Infinity,
+                              delay: item.delay + 1.5
+                            }}
+                            className={`relative w-14 h-14 rounded-xl bg-gradient-to-br ${item.color} flex items-center justify-center shadow-lg`}
+                          >
+                            {/* Floating particles around icon */}
+                            {[...Array(3)].map((_, i) => (
+                              <motion.div
+                                key={i}
+                                initial={{ opacity: 0 }}
+                                animate={{ 
+                                  opacity: [0, 1, 0],
+                                  scale: [0, 1, 0],
+                                  x: [0, (i - 1) * 20],
+                                  y: [0, -10 - (i * 5)]
+                                }}
+                                transition={{ 
+                                  duration: 2,
+                                  repeat: Infinity,
+                                  delay: item.delay + 2 + (i * 0.3)
+                                }}
+                                className="absolute w-1 h-1 bg-white/60 rounded-full"
+                              />
+                            ))}
+                            <span className="text-2xl relative z-10">{item.icon}</span>
+                          </motion.div>
+                          
+                          <div className="flex-1">
+                            <motion.h3 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: item.delay + 0.3 }}
+                              className="font-bold text-lg text-slate-800 mb-1"
+                            >
+                              {item.label}
+                            </motion.h3>
+                            <motion.p
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: item.delay + 0.5 }}
+                              className="text-slate-600 text-sm"
+                            >
+                              {item.description}
+                            </motion.p>
+                          </div>
+                          
+                          {/* Progress Indicator */}
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ delay: item.delay + 0.8, type: "spring" }}
+                            className="relative"
+                          >
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                              className={`w-8 h-8 rounded-full border-2 border-transparent bg-gradient-to-r ${item.color} p-0.5`}
+                            >
+                              <div className="w-full h-full bg-white rounded-full flex items-center justify-center">
+                                <motion.div
+                                  animate={{ scale: [1, 1.2, 1] }}
+                                  transition={{ duration: 1.5, repeat: Infinity }}
+                                  className={`w-2 h-2 rounded-full bg-gradient-to-r ${item.color}`}
+                                />
+                              </div>
+                            </motion.div>
+                          </motion.div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Bottom CTA */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 2.5, duration: 0.8 }}
+                  className="mt-12 text-center"
+                >
+                  <motion.div
+                    animate={{ 
+                      boxShadow: [
+                        "0 0 0 0 rgba(147, 51, 234, 0)",
+                        "0 0 0 8px rgba(147, 51, 234, 0.1)",
+                        "0 0 0 0 rgba(147, 51, 234, 0)"
+                      ]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="inline-block px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl shadow-lg"
+                  >
+                    <motion.span
+                      animate={{ opacity: [1, 0.7, 1] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      Setting up your AI assistant...
+                    </motion.span>
                   </motion.div>
-                ))}
+                </motion.div>
               </motion.div>
             </motion.div>
           )}
@@ -661,7 +845,7 @@ Founder, InboxFlow`;
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">InboxFlow AI</h3>
+                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Inboxo AI</h3>
                         <div className="flex items-center text-sm">
                           <CheckCircle className="h-3 w-3 mr-1 text-emerald-500" />
                           <span className="font-medium text-emerald-600">Generated in 2.3 seconds</span>
@@ -685,7 +869,7 @@ I'd love to show you how this could transform your sales process. Are you availa
 
 Best regards,
 Vadim Tuchila
-Founder, InboxFlow`}
+Founder, Inboxo`}
                       </p>
                   </div>
                 </CardContent>
@@ -789,7 +973,7 @@ Founder, InboxFlow`}
                 className="max-w-2xl mx-auto"
               >
                 <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-                  2. <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">InboxFlow's AI Response</span>
+                                     2. <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Inboxo's AI Response</span>
                 </h2>
                 <motion.div
                   animate={{
@@ -812,7 +996,7 @@ Founder, InboxFlow`}
                         </div>
                       </div>
                       <div>
-                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">InboxFlow AI</h3>
+                        <h3 className="font-bold text-lg bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Inboxo AI</h3>
                         <div className="flex items-center text-sm">
                           <CheckCircle className="h-3 w-3 mr-1 text-emerald-500" />
                           <span className="font-medium text-emerald-600">Generated in 2.3 seconds</span>
@@ -836,7 +1020,7 @@ I'd love to show you how this could transform your sales process. Are you availa
 
 Best regards,
 Vadim Tuchila
-Founder, InboxFlow`}
+Founder, Inboxo`}
                       </p>
                     </div>
                   </CardContent>
@@ -895,11 +1079,10 @@ Founder, InboxFlow`}
               >
                 <div className="max-w-lg mx-auto">
                   <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                    Ready to send this response?
+                    Take advantage of all your leads
                   </h2>
                   <p className="text-lg text-slate-600 mb-6">
-                    Send this AI-generated message now, then unlock InboxFlow to automate 
-                    all your future responses.
+                    Convert all your leads by using auomated responses made by Inboxo.
                   </p>
                 </div>
 
@@ -914,14 +1097,14 @@ Founder, InboxFlow`}
                     whileTap={{ scale: 0.95 }}
                     className="flex-1"
               >
-                <Button 
+                {/* <Button 
                   size="lg" 
                   onClick={handleSendResponse}
                       className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg py-6 shadow-lg"
                 >
                   <Send className="h-5 w-5 mr-2" />
                   Send This Response
-                </Button>
+                </Button> */}
                   </motion.div>
                 
                   <motion.div

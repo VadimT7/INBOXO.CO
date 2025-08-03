@@ -1,4 +1,4 @@
-# InboxFlow - AI-Powered Lead Management Platform
+# Inboxo - AI-Powered Lead Management Platform
 
 Transform your Gmail inbox into a lead-converting machine with AI-powered lead classification, automated responses, and comprehensive analytics. Your all-in-one tool
 to cheat and WIN in lead conversion.
@@ -157,8 +157,4 @@ This project is proprietary software. All rights reserved.
 
 ## 📞 Support
 
-For support, please contact [support@inboxflow.com](mailto:support@inboxflow.com)
-
----
-
-**Built with ❤️ using [Lovable](https://lovable.dev)**
+For support, please contact [support@inboxo.com](mailto:support@inboxo.com)

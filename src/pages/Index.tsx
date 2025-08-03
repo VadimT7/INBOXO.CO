@@ -135,7 +135,7 @@ const Index = () => {
       <Dialog open={showDemoVideo} onOpenChange={setShowDemoVideo}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>InboxFlow Product Demo</DialogTitle>
+            <DialogTitle>Inboxo Product Demo</DialogTitle>
           </DialogHeader>
           <div className="aspect-video bg-slate-900 rounded-lg overflow-hidden">
             <video

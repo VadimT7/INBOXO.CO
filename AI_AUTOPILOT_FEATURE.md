@@ -106,5 +106,5 @@ Value at $100/hour: $5,000
 
 ## Support
 For questions or feedback about the AI AutoPilot Response System:
-- Email: support@inboxflow.com
-- Documentation: docs.inboxflow.com/ai-autopilot 
+- Email: support@inboxo.com
+- Documentation: docs.inboxo.co/ai-autopilot 

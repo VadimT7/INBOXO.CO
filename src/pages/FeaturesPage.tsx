@@ -363,7 +363,7 @@ const FeaturesPage = () => {
         </div>
 
         <motion.div 
-          className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32"
+          className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 mt-16"
           style={{ opacity: heroOpacity }}
         >
           <motion.div
@@ -441,7 +441,7 @@ const FeaturesPage = () => {
             </div>
 
             {/* Social Proof */}
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.8 }}
@@ -467,7 +467,7 @@ const FeaturesPage = () => {
                   <span className="text-white font-semibold">2,847+ teams</span> increased revenue by avg. 312%
                 </p>
               </div>
-            </motion.div>
+            </motion.div> */}
           </motion.div>
         </motion.div>
 
@@ -520,7 +520,7 @@ const FeaturesPage = () => {
                 <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mr-4">
                   <X className="w-6 h-6 text-red-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">Without InboxFlow</h3>
+                <h3 className="text-2xl font-bold text-slate-900">Without Inboxo</h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start">
@@ -557,7 +557,7 @@ const FeaturesPage = () => {
                 <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mr-4">
                   <CheckCircle2 className="w-6 h-6 text-emerald-600" />
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900">With InboxFlow</h3>
+                <h3 className="text-2xl font-bold text-slate-900">With Inboxo</h3>
               </div>
               <ul className="space-y-4">
                 <li className="flex items-start">
@@ -591,7 +591,7 @@ const FeaturesPage = () => {
             viewport={{ once: true }}
             className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-8 text-white text-center"
           >
-            <h3 className="text-2xl font-bold mb-6">The InboxFlow Impact</h3>
+            <h3 className="text-2xl font-bold mb-6">The Inboxo Impact</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div>
                 <div className="text-4xl font-bold">3.5x</div>
@@ -726,7 +726,7 @@ const FeaturesPage = () => {
             </h2>
             
             <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-              Join 10,000+ companies already using InboxFlow to transform their sales process.
+              Join 10,000+ companies already using Inboxo to transform their sales process.
               Start your free trial today - no credit card required.
             </p>
             

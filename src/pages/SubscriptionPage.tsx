@@ -193,7 +193,7 @@ const SubscriptionPage = () => {
       
       // Show success message and redirect to dashboard
       toast({
-        title: "Welcome to InboxFlow!",
+        title: "Welcome to Inboxo!",
         description: "Your subscription is active. Let's start organizing your leads!",
       });
       
@@ -262,7 +262,7 @@ const SubscriptionPage = () => {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-4xl sm:text-5xl font-bold mb-6">
-              {localStorage.getItem('hasSeenOnboarding') ? 'Ready to unlock AI for all your leads?' : 'Welcome to InboxFlow!'} 🎉
+              {localStorage.getItem('hasSeenOnboarding') ? 'Ready to unlock AI for all your leads?' : 'Welcome to Inboxo!'} 🎉
             </h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto mb-8">
               {localStorage.getItem('hasSeenOnboarding') 

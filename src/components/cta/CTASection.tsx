@@ -35,7 +35,7 @@ const CTASection = () => {
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
           >
-            Join thousands of sales teams who've already streamlined their workflow with InboxFlows.
+            Join thousands of sales teams who've already streamlined their workflow with Inboxo.
           </motion.p>
 
           <motion.div

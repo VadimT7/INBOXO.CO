@@ -6,7 +6,7 @@ const TermsPage = () => {
       icon: Scale,
       title: "Legal Agreement",
       content:
-        "By using InboxFlow, you agree to these terms. Please read them carefully before using our services.",
+        "By using Inboxo, you agree to these terms. Please read them carefully before using our services.",
     },
     {
       icon: FileText,
@@ -78,7 +78,7 @@ const TermsPage = () => {
                   1. Acceptance of Terms
                 </h3>
                 <p className="text-slate-600">
-                  By accessing or using InboxFlow, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this service.
+                  By accessing or using Inboxo, you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this service.
                 </p>
               </div>
 
@@ -87,7 +87,7 @@ const TermsPage = () => {
                   2. Use License
                 </h3>
                 <p className="text-slate-600 mb-4">
-                  Subject to your compliance with these Terms, InboxFlow grants you a limited, non-exclusive, non-transferable, non-sublicensable license to access and use the Services.
+                  Subject to your compliance with these Terms, Inboxo grants you a limited, non-exclusive, non-transferable, non-sublicensable license to access and use the Services.
                 </p>
                 <ul className="list-disc pl-6 text-slate-600 space-y-2">
                   <li>The license is for personal or business use only</li>
@@ -117,7 +117,7 @@ const TermsPage = () => {
                   4. Modifications to Service
                 </h3>
                 <p className="text-slate-600">
-                  InboxFlow reserves the right to modify or discontinue the service at any time, with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the service.
+                  Inboxo reserves the right to modify or discontinue the service at any time, with or without notice. We shall not be liable to you or any third party for any modification, suspension, or discontinuance of the service.
                 </p>
               </div>
 
@@ -126,7 +126,7 @@ const TermsPage = () => {
                   5. Limitation of Liability
                 </h3>
                 <p className="text-slate-600">
-                  InboxFlow shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service.
+                  Inboxo shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of or inability to use the service.
                 </p>
               </div>
 
@@ -142,7 +142,7 @@ const TermsPage = () => {
 
             <div className="mt-8 pt-8 border-t border-slate-200">
               <p className="text-slate-600 text-sm">
-                By using InboxFlow, you acknowledge that you have read and understand these terms and agree to be bound by them.
+                By using Inboxo, you acknowledge that you have read and understand these terms and agree to be bound by them.
               </p>
             </div>
           </div>

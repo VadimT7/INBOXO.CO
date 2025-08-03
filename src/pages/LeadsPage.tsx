@@ -1030,7 +1030,7 @@ const LeadsPage = () => {
       localStorage.setItem('userHasLoggedIn', 'true');
       
       // Show success message
-      toast.success('🎉 Welcome to InboxFlow! Your subscription is active. Let\'s start organizing your leads!', {
+      toast.success('🎉 Welcome to Inboxo! Your subscription is active. Let\'s start organizing your leads!', {
         duration: 4000,
       });
       

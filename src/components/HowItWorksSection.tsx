@@ -28,7 +28,7 @@ const HowItWorksSection = () => {
     <section id="how-it-works" className="bg-slate-50 py-16 sm:py-20 lg:py-24 px-4 sm:px-6 lg:px-8"> {/* Added id here */}
       <div className="max-w-6xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12 sm:mb-16 text-slate-800">
-          How InboxFlows Works
+          How Inboxo Works
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {steps.map((step) => (

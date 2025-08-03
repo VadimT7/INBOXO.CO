@@ -175,7 +175,7 @@ const AboutPage = () => {
                 <Rocket className="w-10 h-10 text-blue-500 mb-4" />
                 <h3 className="text-xl font-bold text-slate-900 mb-4">The Beginning</h3>
                 <p className="text-slate-600">
-                  InboxFlow was born from a simple observation: businesses spend too much time managing emails and miss valuable opportunities in the process. Our founder, having experienced this firsthand while running a digital agency, decided to create a solution that would transform how businesses handle their email communications.
+                  Inboxo was born from a simple observation: businesses spend too much time managing emails and miss valuable opportunities in the process. Our founder, having experienced this firsthand while running a digital agency, decided to create a solution that would transform how businesses handle their email communications.
                 </p>
               </div>
             </motion.div>
@@ -209,7 +209,7 @@ const AboutPage = () => {
                 <Globe className="w-10 h-10 text-purple-500 mb-4" />
                 <h3 className="text-xl font-bold text-slate-900 mb-4">Today & Beyond</h3>
                 <p className="text-slate-600">
-                  Today, InboxFlow serves thousands of businesses worldwide, helping them save time and capture more opportunities from their inbox. We're just getting started, and we're excited to continue innovating and helping businesses grow.
+                  Today, Inboxo serves thousands of businesses worldwide, helping them save time and capture more opportunities from their inbox. We're just getting started, and we're excited to continue innovating and helping businesses grow.
                 </p>
               </div>
             </motion.div>
