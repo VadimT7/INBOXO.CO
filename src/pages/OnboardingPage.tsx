@@ -1070,68 +1070,127 @@ Founder, Inboxo`}
                 </Card>
               </motion.div>
               
-              {/* Step 5: The offer */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1 }}
-                className="text-center space-y-6"
-              >
-                <div className="max-w-lg mx-auto">
-                  <h2 className="text-3xl font-bold text-slate-900 mb-4">
-                    Take advantage of all your leads
-                  </h2>
-                  <p className="text-lg text-slate-600 mb-6">
-                    Convert all your leads by using auomated responses made by Inboxo.
-                  </p>
-                </div>
+                             {/* Step 5: The offer */}
+               <motion.div
+                 initial={{ opacity: 0, y: 20 }}
+                 animate={{ opacity: 1, y: 0 }}
+                 transition={{ delay: 1 }}
+                 className="text-center space-y-6 pt-8 pb-12"
+               >
+                 <div className="max-w-lg mx-auto mb-8">
+                   <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                     Take advantage of all your leads
+                   </h2>
+                   <p className="text-lg text-slate-600">
+                     Convert all your leads by using auomated responses made by Inboxo.
+                   </p>
+                 </div>
 
                 <motion.div
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 1.2 }}
-                  className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto"
+                  className="flex justify-center"
                 >
                   <motion.div
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className="flex-1"
-              >
-                {/* <Button 
-                  size="lg" 
-                  onClick={handleSendResponse}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-lg py-6 shadow-lg"
-                >
-                  <Send className="h-5 w-5 mr-2" />
-                  Send This Response
-                </Button> */}
-                  </motion.div>
-                
-                  <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex-1"
+                    className="relative"
                   >
-                <Button 
-                  size="lg" 
-                  onClick={handleSeeAllFeatures}
-                      className="w-full bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white text-lg py-6 shadow-lg"
-                >
-                      <Zap className="h-5 w-5 mr-2" />
-                      Unlock All Your Leads
-                </Button>
+                    {/* Animated glow rings */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        opacity: [0.3, 0.5, 0.3]
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                      }}
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-blue-400 rounded-xl blur-md opacity-40"
+                    />
+                    <motion.div
+                      animate={{
+                        scale: [1.05, 1.15, 1.05],
+                        opacity: [0.2, 0.4, 0.2]
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        delay: 0.5
+                      }}
+                      className="absolute inset-0 bg-gradient-to-r from-emerald-300 to-blue-300 rounded-xl blur-lg opacity-30"
+                    />
+                    
+                    {/* Main button */}
+                    <Button 
+                      size="lg" 
+                      onClick={handleSeeAllFeatures}
+                      className="relative z-10 px-12 py-6 bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-700 hover:to-blue-700 text-white text-xl font-bold shadow-2xl rounded-xl border-2 border-white/20 transform hover:scale-105 transition-all duration-300 overflow-hidden"
+                    >
+                      {/* Inner shine effect */}
+                      <motion.div
+                        animate={{
+                          x: ["-100%", "100%"]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                          repeatDelay: 1
+                        }}
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"
+                      />
+                      <Zap className="h-6 w-6 mr-3 relative z-10" />
+                      <span className="relative z-10">Close All Your Leads</span>
+                    </Button>
                   </motion.div>
-              </motion.div>
+                </motion.div>
               
-                <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                  transition={{ delay: 1.4 }}
-                  className="text-sm text-slate-500 space-y-1"
-                >
-                  <p>✓ 30-day money-back guarantee</p>
-                  <p>✓ Setup takes 2 minutes</p>
-                  <p>✓ Cancel anytime</p>
+                                 <motion.div
+                   initial={{ opacity: 0 }}
+                   animate={{ opacity: 1 }}
+                   transition={{ delay: 1.4 }}
+                   className="max-w-2xl mx-auto"
+                 >
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+                    
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 2.0 }}
+                      className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-slate-200"
+                    >
+                      <div className="text-3xl font-bold text-purple-600 mb-2">100%</div>
+                      <p className="text-sm font-semibold text-slate-700">Free Trial</p>
+                      <p className="text-xs text-slate-500 mt-1">Start Your 2-Week Trial Today</p>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.6 }}
+                      className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-slate-200"
+                    >
+                      <div className="text-3xl font-bold text-emerald-600 mb-2">82%</div>
+                      <p className="text-sm font-semibold text-slate-700">Higher Lead Conversion</p>
+                      <p className="text-xs text-slate-500 mt-1">Average Customer Results</p>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1.8 }}
+                      className="text-center p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-slate-200"
+                    >
+                      <div className="text-3xl font-bold text-blue-600 mb-2">2 Min</div>
+                      <p className="text-sm font-semibold text-slate-700">Setup Time</p>
+                      <p className="text-xs text-slate-500 mt-1">Start Closing Leads Today</p>
+                    </motion.div>
+                  
+                  </div>
                 </motion.div>
               </motion.div>
             </motion.div>
