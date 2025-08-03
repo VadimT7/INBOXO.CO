@@ -12,8 +12,18 @@ const Footer = () => {
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center space-x-2 mb-4">
               {/* Logo */}
-              <div className="w-8 h-8 rounded bg-blue-500 flex items-center justify-center">
-                <span className="text-white font-bold text-xl">IF</span>
+              <div className="relative w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center overflow-hidden transition-all duration-300 hover:scale-110 shadow-lg group">
+                {/* Modern "I" with inbox-like design */}
+                <div className="relative flex flex-col items-center justify-center w-full h-full">
+                  {/* Top bar (inbox lid) */}
+                  <div className="absolute top-1 w-5 h-0.5 bg-white rounded-full opacity-90"></div>
+                  {/* Main "I" stem */}
+                  <div className="w-1 h-4 bg-white rounded-full"></div>
+                  {/* Bottom bar (inbox base) */}
+                  <div className="absolute bottom-1 w-5 h-0.5 bg-white rounded-full opacity-90"></div>
+                  {/* Subtle glow effect */}
+                  <div className="absolute inset-0 bg-white/10 rounded-lg blur-sm group-hover:bg-white/20 transition-all duration-300"></div>
+                </div>
               </div>
               <span className="text-xl font-bold">Inboxo</span>
             </div>

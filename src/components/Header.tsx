@@ -57,14 +57,24 @@ const Header = () => {
             <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
               <div className="relative flex items-center justify-between">
                 {/* Left side - Logo */}
-                <Link to={session ? "/leads" : "/"} className="text-white text-xl font-semibold flex items-center space-x-2 hover:opacity-80 transition-opacity">
+                <Link to={session ? "/leads" : "/"} className="text-white text-xl font-semibold flex items-center space-x-2 hover:opacity-80 transition-opacity group">
                   <div className={cn(
-                    "w-8 h-8 rounded flex items-center justify-center",
-                    isDashboardPage ? "bg-white/20" : "bg-blue-500"
+                    "relative w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-110",
+                    isDashboardPage ? "bg-gradient-to-br from-white/30 to-white/10 backdrop-blur-sm" : "bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg"
                   )}>
-                    <span className="text-white font-bold text-xl">IF</span>
+                    {/* Modern "I" with inbox-like design */}
+                    <div className="relative flex flex-col items-center justify-center w-full h-full">
+                      {/* Top bar (inbox lid) */}
+                      <div className="absolute top-1 w-5 h-0.5 bg-white rounded-full opacity-90"></div>
+                      {/* Main "I" stem */}
+                      <div className="w-1 h-4 bg-white rounded-full"></div>
+                      {/* Bottom bar (inbox base) */}
+                      <div className="absolute bottom-1 w-5 h-0.5 bg-white rounded-full opacity-90"></div>
+                      {/* Subtle glow effect */}
+                      <div className="absolute inset-0 bg-white/10 rounded-lg blur-sm group-hover:bg-white/20 transition-all duration-300"></div>
+                    </div>
                   </div>
-                  <span>Inboxo</span>
+                  <span className="group-hover:text-blue-200 transition-colors duration-300">Inboxo</span>
                 </Link>
 
                 {/* Center - Navigation */}
